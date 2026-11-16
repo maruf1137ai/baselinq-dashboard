@@ -3,7 +3,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import React, { useState } from "react";
 import { Input } from "../ui/input";
 import { Link } from "react-router-dom";
-import useFetch from "@/hooks/useFetch";
+import { useQuery } from "@tanstack/react-query";
+import { fetchData } from "@/lib/Api";
+import { fetchAllPages, type PagedList } from "@/lib/fetchAllPages";
+import { Button } from "@/components/ui/button";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatMeetingDateTime } from "@/lib/dateUtils";
@@ -48,20 +51,28 @@ export default function MeetingsList() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const projectId = localStorage.getItem("selectedProjectId");
 
-  const { data, isLoading } = useFetch<any>(
-    projectId ? `meetings/?project_id=${projectId}` : null,
-    {
-      refetchInterval: (query: any) => {
-        const list: any[] = Array.isArray(query?.state?.data) ? query.state.data : (query?.state?.data?.results ?? []);
-        const hasActive = list.some((m: any) => m.status === "starting_soon" || m.status === "live");
-        return hasActive ? 10000 : false;
-      },
-    }
-  );
+  // Every page, not the first. `meetings/` is paged by the server, and this
+  // list read one response, so a project's 21st meeting never appeared and
+  // every filter count stopped at 20. A project's meetings are a bounded
+  // list (a weekly site meeting is ~50 a year), and the status filters and
+  // counts below are computed over all of them, so the walk fetches them all.
+  // The key starts with the list URL so the RSVP and "meeting scheduled"
+  // invalidations (`meetings/?project_id=…`) still refresh it.
+  const listUrl = `meetings/?project_id=${projectId}`;
+  const { data, isLoading, isError, refetch } = useQuery<PagedList<Meeting>>({
+    queryKey: [listUrl, "all-pages"],
+    enabled: !!projectId,
+    queryFn: () => fetchAllPages<Meeting>((page) => `${listUrl}&page_size=100&page=${page}`, fetchData),
+    refetchInterval: (query) => {
+      const list = query.state.data?.rows ?? [];
+      const hasActive = list.some((m) => m.status === "starting_soon" || m.status === "live");
+      return hasActive ? 10000 : false;
+    },
+  });
 
   const { unreadByMeetingId } = useMeetingUnreadNotifications(projectId);
 
-  const meetings: Meeting[] = Array.isArray(data) ? data : (data?.results ?? []);
+  const meetings: Meeting[] = data?.rows ?? [];
 
   const upcoming   = meetings.filter((m) => (m.status === "scheduled" || m.status === "starting_soon" || m.status === "live") && m.my_rsvp !== "declined");
   const declined   = meetings.filter((m) => m.my_rsvp === "declined");
@@ -143,7 +154,22 @@ export default function MeetingsList() {
 
       {isLoading && <AwesomeLoader message="Loading meetings" />}
 
-      {!isLoading && (
+      {isError && (
+        <div className="flex flex-col items-center justify-center gap-3 py-12" role="alert">
+          <p className="text-sm text-destructive">Meetings couldn't be loaded.</p>
+          <Button variant="outline" className="h-8 text-xs rounded-lg" onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      )}
+
+      {data?.truncated && (
+        <p className="text-xs text-muted-foreground" role="status">
+          Showing the {meetings.length} most recent meetings. Older meetings are not listed here.
+        </p>
+      )}
+
+      {!isLoading && !isError && (
         <>
           {show("upcoming") && filteredUpcoming.length > 0 && (
             <Section title="Upcoming">

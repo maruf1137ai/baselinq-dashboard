@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { fetchData, updateProfile, orgInviteMember, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,6 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoles } from "@/hooks/useRoles";
-import { AiMark } from "@/components/icons/AiMark";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -749,11 +748,15 @@ const SelectProject = () => {
 
   const isProfileReady = !userLoading && !!user;
 
-  const { data: projectsData, isLoading: projectsLoading } = useFetch(
-    user?.id && isProfileReady ? `projects/?userId=${user.id}` : "",
-    { enabled: !!user?.id && !!isProfileReady }
-  );
-  const projects: any[] = projectsData?.results || projectsData || [];
+  // Every page: the list is paged at twenty, so a user's 21st project was
+  // never offered here.
+  const {
+    data: projectsData,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    refetch: refetchProjects,
+  } = useAllPages<any>(user?.id && isProfileReady ? `projects/?userId=${user.id}` : null);
+  const projects: any[] = projectsData?.rows ?? [];
   const { healthMap } = useProjectsHealth();
 
   const selectedProjectId = localStorage.getItem("selectedProjectId") || "";
@@ -819,7 +822,7 @@ const SelectProject = () => {
   // ── Profile incomplete screen ──
   // Only show when the user hasn't completed onboarding AND has no projects
   // (team members invited by an owner may have role=null but should see their projects)
-  if (!projectsLoading && projects.length === 0 && user && !user.role) {
+  if (!projectsLoading && !projectsError && projects.length === 0 && user && !user.role) {
     return (
       <>
         <div className="max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">
@@ -837,7 +840,6 @@ const SelectProject = () => {
               onClick={() => setShowModal(true)}
               className="h-10 px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
             >
-              <AiMark size={16} className="text-white" />
               Complete Profile
             </Button>
           </div>
@@ -867,6 +869,13 @@ const SelectProject = () => {
         {projectsLoading ? (
           <div className="flex items-center justify-center py-24">
             <AwesomeLoader message="Loading projects" />
+          </div>
+        ) : projectsError ? (
+          <div className="border border-border rounded-xl bg-card p-12 flex flex-col items-center gap-3 text-center" role="alert">
+            <p className="text-sm text-destructive">Your projects couldn't be loaded.</p>
+            <Button variant="outline" className="h-8 text-xs rounded-lg" onClick={() => void refetchProjects()}>
+              Try again
+            </Button>
           </div>
         ) : projects.length === 0 ? (
           <div className="border border-border rounded-xl bg-card shadow-sm p-14 flex flex-col items-center gap-4 text-center">

@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const responses: Record<string, unknown> = {};
 const mockUpdateTerms = vi.fn();
+const mockUpdateProject = vi.fn();
 
 vi.mock("@/hooks/useFetch", () => ({
   default: (url: string) => ({ data: responses[url], isLoading: false, isError: false, error: null }),
@@ -21,7 +22,7 @@ vi.mock("@/hooks/usePermissions", () => ({
 vi.mock("@/lib/Api", () => ({
   updatePaymentTerms: (...args: unknown[]) => mockUpdateTerms(...args),
   updateRiskPolicy: vi.fn(),
-  updateProject: vi.fn(),
+  updateProject: (...args: unknown[]) => mockUpdateProject(...args),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -58,6 +59,7 @@ const renderPage = () =>
 beforeEach(() => {
   localStorage.setItem("selectedProjectId", "45");
   mockUpdateTerms.mockReset().mockResolvedValue(TERMS);
+  mockUpdateProject.mockReset().mockResolvedValue({});
   responses["projects/45/payment-terms/"] = TERMS;
   responses["projects/45/risk-policy/"] = { valuation_basis: "measured_progress", pc_gate_mode: "advisory" };
   responses["projects/45/billing-parties/"] = {
@@ -92,5 +94,54 @@ describe("Contract & payment", () => {
     renderPage();
     expect(screen.getByRole("status")).toHaveTextContent("Tax invoices on this project are not yet valid");
     expect(screen.getByText("1 missing")).toBeInTheDocument();
+  });
+
+  describe("builders' break", () => {
+    const BREAK = { start: "2026-12-15", end: "2027-01-08", label: "Builders' break 2026/27 (confirm dates)" };
+    const withPeriods = (source: string, effective: unknown[]) => {
+      responses["projects/45/"] = {
+        clientDetails: {}, appointedCompany: {},
+        annualShutdownPeriods: source === "project" ? effective : null,
+        shutdownPeriods: { effective, source, platformDefault: [BREAK] },
+      };
+    };
+
+    it("shows the platform calendar a project follows until it sets its own", () => {
+      withPeriods("platform", [BREAK]);
+      renderPage();
+      expect(screen.getByText("Platform default")).toBeInTheDocument();
+      expect(screen.getByText(/Builders' break 2026\/27 \(confirm dates\) · 15 Dec 2026 to 0?8 Jan 2027/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Use the platform default" })).not.toBeInTheDocument();
+    });
+
+    it("saves the project's own periods", async () => {
+      withPeriods("platform", [BREAK]);
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit for this project" }));
+      fireEvent.change(screen.getByLabelText("Last day"), { target: { value: "2027-01-11" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save for this project" }));
+      await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+      expect(mockUpdateProject.mock.calls[0][0]).toEqual({
+        id: "45",
+        annual_shutdown_periods: [{ ...BREAK, end: "2027-01-11" }],
+      });
+    });
+
+    it("will not save a period that ends before it starts", () => {
+      withPeriods("platform", [BREAK]);
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit for this project" }));
+      fireEvent.change(screen.getByLabelText("Last day"), { target: { value: "2026-12-01" } });
+      expect(screen.getByRole("alert")).toHaveTextContent("Period 1 ends before it starts.");
+      expect(screen.getByRole("button", { name: "Save for this project" })).toBeDisabled();
+    });
+
+    it("returns a project with its own periods to the platform default", async () => {
+      withPeriods("project", []);
+      renderPage();
+      expect(screen.getByText("No annual shutdown applies to this project.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Use the platform default" }));
+      await waitFor(() => expect(mockUpdateProject).toHaveBeenCalledWith({ id: "45", annual_shutdown_periods: null }));
+    });
   });
 });

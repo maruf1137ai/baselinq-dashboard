@@ -1,23 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,699 +10,166 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Shield,
-  Download,
-  Printer,
-  FileText,
-  Filter,
-  TrendingUp,
-  Activity,
-  Calendar,
-  BarChart3,
-} from "lucide-react";
+import { Download, Filter } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
-import CashIcon from "@/components/icons/CashIcon";
-import Asterisk from "@/components/icons/Asterisk";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
-import { TAB_LIST_RADIX, TAB_TRIGGER_RADIX } from "@/components/ui/tab-rail";
 import {
+  PROJECT_TRAIL_LIMIT,
   buildAuditTrail,
-  buildCompliance,
-  isTaskCompleted,
-  taskCodeOf,
-  taskIdOf,
-  taskTypeOf,
+  isTrailCapped,
   tasksFrom,
-} from "@/lib/auditCompliance";
+  trailToCsv,
+} from "@/lib/auditTrail";
 
 /**
- * The app's tab strip, expressed for shadcn's <Tabs>. Same geometry as the
- * bare-<button> strips on Finance, Project Health and Settings → Users:
- * `text-sm py-4 px-6`, a 2px underline pulled onto the rail's own hairline.
+ * The project's audit trail: only rows the server recorded.
+ *
+ * This page used to carry a compliance score, a risk level and a deadline
+ * tracker computed from JBCC clauses and periods that were made up, and it
+ * filled an empty trail with invented entries. All of that is gone (see
+ * lib/auditTrail). Notice deadlines are on the Compliance page.
  */
-// The rail is defined once in `tab-rail.ts`; this page used to declare its
-// own copy of both strings.
-const TAB_LIST = TAB_LIST_RADIX;
-const TAB_TRIGGER = TAB_TRIGGER_RADIX;
-
-// Werner rev H — unified 5-stage Decision Timeline for every contractual
-// doc type. CPI keeps its own scheduling flow (separate spec).
-const WERNER_STAGES = ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"];
-const taskTypeStages: Record<string, string[]> = {
-  VO: WERNER_STAGES,
-  RFI: WERNER_STAGES,
-  SI: WERNER_STAGES,
-  GI: WERNER_STAGES,
-  IC: WERNER_STAGES,
-  DC: WERNER_STAGES,
-  CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
-};
-
-// Task type labels
-const TASK_TYPE_LABELS: Record<string, string> = {
-  VO: "Variation Order",
-  RFI: "Request for Information",
-  SI: "Site Instruction",
-  DC: "Claim",
-  CPI: "Critical Path Item (legacy)",
-  GI: "General Instruction",
-};
-
-
 export default function AuditPage() {
   const projectId = localStorage.getItem("selectedProjectId");
   const pidNum = parseInt(projectId || "0") || null;
   const { data: effectivePerms, isLoading: permsLoading } = useEffectivePermissions(pidNum);
-
-  const accessLevel: "full" | "view" | "restricted" = permsLoading
-    ? "full"
-    : effectivePerms?.permissions?.["audit.full_access"]
-      ? "full"
-      : effectivePerms?.permissions?.["audit.view"]
-        ? "view"
-        : "restricted";
+  // Export is for full audit access only, as before.
+  const canExport = !permsLoading && !!effectivePerms?.permissions?.["audit.full_access"];
 
   const [typeFilter, setTypeFilter] = useState("all");
-  const [deadlineFilter, setDeadlineFilter] = useState("all");
 
-  // Fetch all tasks for the project
-  const { data: taskResponse, isLoading } = useFetch<any>(
+  // The tasks list only supplies each row's record number and type.
+  const { data: taskResponse, isError: tasksFailed } = useFetch<any>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
-
-  // `{ tasks }`, not `{ results }` — reading the wrong key computed every
-  // figure on this page over nothing (QA BUG-10). See lib/auditCompliance.
   const tasks = useMemo(() => tasksFrom(taskResponse), [taskResponse]);
 
-  // Compute compliance metrics
-  const complianceData = useMemo(() => buildCompliance(tasks), [tasks]);
+  const {
+    data: logs,
+    isLoading,
+    isError,
+    refetch,
+  } = useFetch<any[]>(projectId ? `tasks/audits/?projectId=${projectId}` : "", { enabled: !!projectId });
 
-  // Filter deadlines
-  const filteredDeadlines = useMemo(() => {
-    let filtered = complianceData.deadlines;
-    if (typeFilter !== "all") {
-      filtered = filtered.filter((d) => d.taskType === typeFilter);
-    }
-    if (deadlineFilter === "overdue") {
-      filtered = filtered.filter((d) => d.daysRemaining < 0 && !d.isCompleted);
-    } else if (deadlineFilter === "at-risk") {
-      filtered = filtered.filter((d) => d.daysRemaining >= 0 && d.daysRemaining <= 3 && !d.isCompleted);
-    } else if (deadlineFilter === "on-track") {
-      filtered = filtered.filter((d) => d.daysRemaining > 3 && !d.isCompleted);
-    } else if (deadlineFilter === "completed") {
-      filtered = filtered.filter((d) => d.isCompleted);
-    }
-    return filtered;
-  }, [complianceData.deadlines, typeFilter, deadlineFilter]);
-
-  // Audit trail logs (from all tasks)
-  const [auditTypeFilter, setAuditTypeFilter] = useState("all");
-
-  // Fetch audit logs from all tasks
-  // `projects/<id>/audit-logs/` never existed (a 404 on every load). The
-  // project's trail is the task audits, scoped to what this viewer may see.
-  const { data: allAuditLogs } = useFetch<any[]>(
-    projectId ? `tasks/audits/?projectId=${projectId}` : "",
-    { enabled: !!projectId }
+  const trail = useMemo(() => buildAuditTrail(Array.isArray(logs) ? logs : [], tasks), [logs, tasks]);
+  const shown = useMemo(
+    () => (typeFilter === "all" ? trail : trail.filter((e) => e.taskType === typeFilter)),
+    [trail, typeFilter]
   );
+  const capped = isTrailCapped(logs);
 
-  // Fallback: generate audit entries from task data
-  const auditTrail = useMemo(() => {
-    if (allAuditLogs && Array.isArray(allAuditLogs) && allAuditLogs.length > 0) {
-      const logs = buildAuditTrail(allAuditLogs, tasks);
-      return auditTypeFilter === "all" ? logs : logs.filter((log) => log.taskType === auditTypeFilter);
-    }
-
-    // Fallback: derive audit entries from tasks
-    const entries: any[] = [];
-    tasks.forEach((task: any) => {
-      const type = taskTypeOf(task);
-      const createdAt = task.created_at || task.createdAt;
-      if (createdAt) {
-        entries.push({
-          action: `${type} Created`,
-          description: `${TASK_TYPE_LABELS[type] || type} "${task.task?.title || taskCodeOf(task)}" was created`,
-          createdByName: task.createdByName || task.created_by_name || "System",
-          created_at: createdAt,
-          taskType: type,
-          taskId: taskIdOf(task),
-        });
-      }
-      if (isTaskCompleted(task)) {
-        entries.push({
-          action: `${type} Completed`,
-          description: `${TASK_TYPE_LABELS[type] || type} "${task.task?.title || taskCodeOf(task)}" was completed`,
-          createdByName: "System",
-          created_at: task.updated_at || task.updatedAt || createdAt,
-          taskType: type,
-          taskId: taskIdOf(task),
-        });
-      }
-    });
-
-    let filtered = entries;
-    if (auditTypeFilter !== "all") {
-      filtered = filtered.filter((e) => e.taskType === auditTypeFilter);
-    }
-
-    return filtered.sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [allAuditLogs, tasks, auditTypeFilter]);
-
-  // CSV export
   const exportCSV = () => {
-    const headers = ["Task #", "Type", "Clause", "Deadline", "Days Remaining", "Status", "Assigned To"];
-    const rows = complianceData.deadlines.map((d) => [
-      d.taskNumber,
-      d.taskType,
-      d.clause,
-      formatDate(d.deadline),
-      d.daysRemaining,
-      d.isCompleted ? "Completed" : d.status.label,
-      d.assignedTo,
-    ]);
-
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([trailToCsv(shown)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `compliance-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `audit-trail-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const riskColors: Record<string, string> = {
-    High: "text-red-600 bg-red-50 border-red-200",
-    Medium: "text-amber-600 bg-amber-50 border-amber-200",
-    Low: "text-green-600 bg-green-50 border-green-200",
-  };
-
   return (
     <DashboardLayout>
-      {/* Was padding="p-0" plus its own `px-8 py-[17px]` — a 32px left gutter
-          and a 17px top inset that matched no other page in the app, under an
-          eyebrow ("Dashboard") no other page carries. Now the canonical stack:
-          DashboardLayout's p-6, a space-y-6 wrapper, PageHeader first. */}
       <div className="space-y-6">
-        <PageHeader title="Audit & Compliance" />
+        <PageHeader
+          title="Audit trail"
+          description="Every action recorded on this project's records, with who did it and when."
+          actions={
+            canExport && shown.length > 0 ? (
+              <Button variant="outline" onClick={exportCSV}>
+                <Download className="h-4 w-4 mr-2" />
+                Download CSV
+              </Button>
+            ) : null
+          }
+        />
 
-        <Tabs defaultValue="overview">
-          {/* Same underline strip as Finance, Project Health and Settings →
-              Users, rather than the grey pill group this page alone used. */}
-          <TabsList className={TAB_LIST}>
-              <TabsTrigger
-                value="overview"
-                className={TAB_TRIGGER}>
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="audit-trail"
-                className={TAB_TRIGGER}>
-                <Activity className="h-4 w-4 mr-2" />
-                Audit Trail
-              </TabsTrigger>
-              <TabsTrigger
-                value="deadlines"
-                className={TAB_TRIGGER}>
-                <Clock className="h-4 w-4 mr-2" />
-                Deadline Tracker
-              </TabsTrigger>
-              {accessLevel === "full" && (
-                <TabsTrigger
-                  value="export"
-                  className={TAB_TRIGGER}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export & Reports
-                </TabsTrigger>
-              )}
-            </TabsList>
+        <p className="text-sm text-[#6B7280]">
+          Notice deadlines and time bars are worked out from the contract on the{" "}
+          <Link to="/compliance" className="underline text-[#1A1A1A]">Compliance page</Link>.
+        </p>
 
-            {/* Section 1: Compliance Overview */}
-            <TabsContent value="overview" className="mt-6">
-              {/* Stat Cards */}
-              <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-muted/50 !border-0 rounded-xl shadow-none">
-                  <CardContent className="p-2.5">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <CashIcon />
-                      <p className="text-sm text-gray2 mb-1">Compliance Score</p>
-                    </div>
-                    <div className="bg-card py-[6px] px-[14px] rounded-lg">
-                      <h3 className="text-2xl text-[#0F172A]">{complianceData.score}%</h3>
-                      <Progress value={complianceData.score} className="h-[8px] my-2.5" />
-                      <p className="text-xs text-[#717784]">
-                        {complianceData.score >= 80
-                          ? "Above target threshold"
-                          : complianceData.score >= 50
-                            ? "Approaching target"
-                            : "Below target threshold"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-[#6B7280]">
+            <Filter className="h-4 w-4" />
+            <span className="text-sm">Filter by type:</span>
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[220px] bg-card border-border">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="VO">Variation Order</SelectItem>
+              <SelectItem value="RFI">Request for Information</SelectItem>
+              <SelectItem value="SI">Site Instruction</SelectItem>
+              <SelectItem value="GI">General Instruction</SelectItem>
+              <SelectItem value="IC">Intention to Claim</SelectItem>
+              <SelectItem value="DC">Claim</SelectItem>
+              <SelectItem value="CPI">Critical Path Item (legacy)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
-                  <CardContent className="p-2.5 flex-1 flex flex-col">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <CashIcon />
-                      <p className="text-sm text-gray2 mb-1">Pending Deadlines</p>
-                    </div>
-                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
-                      <h3 className="text-2xl text-[#0F172A]">{complianceData.pendingDeadlines}</h3>
-                      <p className="text-xs text-[#717784]">
-                        {complianceData.pendingDeadlines > 0
-                          ? `${complianceData.pendingDeadlines} due within 7 days`
-                          : "No upcoming deadlines"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+        {tasksFailed && !isError && (
+          <p role="status" className="text-sm text-amber-800">
+            Record numbers could not be loaded, so some rows show no record number.
+          </p>
+        )}
 
-                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
-                  <CardContent className="p-2.5 flex-1 flex flex-col">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <CashIcon />
-                      <p className="text-sm text-gray2 mb-1">Overdue Items</p>
-                    </div>
-                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
-                      <h3 className="text-2xl text-[#0F172A]">
-                        <span className={complianceData.overdueItems > 0 ? "text-[#DC2626]" : ""}>
-                          {complianceData.overdueItems}
-                        </span>
-                      </h3>
-                      <p className="text-xs text-[#717784]">
-                        {complianceData.overdueItems > 0
-                          ? `${complianceData.overdueItems} items past deadline`
-                          : "All items on track"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+        {capped && !isError && (
+          <p data-testid="trail-capped" className="text-sm text-[#6B7280]">
+            Showing the latest {PROJECT_TRAIL_LIMIT} entries. Older entries are kept on each record's own page.
+          </p>
+        )}
 
-                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
-                  <CardContent className="p-2.5 flex-1 flex flex-col">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <Asterisk />
-                      <p className="text-sm text-gray2 mb-1">Risk Level</p>
-                    </div>
-                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
-                      <Badge className={`${riskColors[complianceData.riskLevel]} border w-fit text-sm`}>
-                        {complianceData.riskLevel}
-                      </Badge>
-                      <p className="text-xs text-[#717784] mt-2">
-                        Based on {complianceData.overdueItems} overdue items
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+        <div className="bg-card rounded-xl border border-border p-6">
+          {isLoading ? (
+            <div className="flex justify-center p-4">
+              <AwesomeLoader message="Loading the audit trail" />
+            </div>
+          ) : isError ? (
+            <div role="alert" className="flex flex-col gap-2 text-sm text-red-700">
+              <p>The audit trail could not be loaded. Nothing is shown rather than a partial record.</p>
+              <div>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  Try again
+                </Button>
               </div>
-
-              {/* Compliance by Task Type */}
-              <div className="mt-6 bg-card rounded-xl border border-border overflow-hidden">
-                <div className="px-6 py-4 border-b border-border">
-                  <h3 className="text-sm font-medium text-[#1A1A1A]">Compliance by Document Type</h3>
-                </div>
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow className="hover:bg-muted/50">
-                      <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Document Type</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Total</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Compliant</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Overdue</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Compliance %</TableHead>
-                      <TableHead className="pr-6 text-right text-[#6B7280] font-normal">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(complianceData.byType).length > 0 ? (
-                      Object.entries(complianceData.byType).map(([type, data]) => {
-                        const pct = data.total > 0 ? Math.round((data.compliant / data.total) * 100) : 0;
-                        return (
-                          <TableRow key={type} className="hover:bg-muted/50 border-b border-border last:border-0">
-                            <TableCell className="pl-6 py-4">
-                              <div className="flex items-center gap-2">
-                                <Badge className="bg-muted text-[#1A1A1A] border-none text-xs font-medium">
-                                  {type}
-                                </Badge>
-                                <span className="text-sm text-[#6B7280]">{TASK_TYPE_LABELS[type] || type}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-4 text-sm text-[#1A1A1A]">{data.total}</TableCell>
-                            <TableCell className="py-4 text-sm text-green-600">{data.compliant}</TableCell>
-                            <TableCell className="py-4 text-sm text-red-600">{data.overdue}</TableCell>
-                            <TableCell className="py-4">
-                              <div className="flex items-center gap-2">
-                                <Progress value={pct} className="h-2 w-20" />
-                                <span className="text-sm text-[#1A1A1A]">{pct}%</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="pr-6 py-4 text-right">
-                              <Badge className={`${pct >= 80 ? "bg-green-50 text-green-700 border-green-200" : pct >= 50 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"} border text-xs`}>
-                                {pct >= 80 ? "Good" : pct >= 50 ? "Needs Attention" : "Critical"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-[#6B7280] text-sm">
-                          {isLoading ? (
-                            <div className="flex justify-center p-4">
-                              <AwesomeLoader message="Analyzing compliance" />
-                            </div>
-                          ) : "No records to assess yet — compliance is scored once instructions, RFIs and variations are raised on this project."}
-                        </TableCell>
-                      </TableRow>
+            </div>
+          ) : shown.length === 0 ? (
+            <p className="text-sm text-[#6B7280]">
+              {trail.length === 0
+                ? "No activity has been recorded on this project yet."
+                : "No activity recorded for this type."}
+            </p>
+          ) : (
+            <ol className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
+              {shown.map((e, i) => (
+                <li key={`${e.taskId}-${e.created_at}-${i}`} className="relative pl-8">
+                  <div className="absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 border-border rounded-full" />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {e.record && <span className="text-xs font-medium text-[#1A1A1A]">{e.record}</span>}
+                    <p className="text-xs text-[#1A1A1A]">{e.action}</p>
+                    {e.taskType && (
+                      <Badge className="bg-muted text-[#6B7280] border-none text-xs">{e.taskType}</Badge>
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-
-            {/* Section 2: Audit Trail */}
-            <TabsContent value="audit-trail" className="mt-6">
-              {/* Filters */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="flex items-center gap-2 text-[#6B7280]">
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm">Filter by type:</span>
-                </div>
-                <Select value={auditTypeFilter} onValueChange={setAuditTypeFilter}>
-                  <SelectTrigger className="w-[160px] bg-card border-border">
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="SI">SI - Site Instruction</SelectItem>
-                    <SelectItem value="VO">VO - Variation Order</SelectItem>
-                    <SelectItem value="RFI">RFI - Request for Information</SelectItem>
-                    <SelectItem value="GI">GI - General Instruction</SelectItem>
-                    <SelectItem value="DC">Claim</SelectItem>
-                    <SelectItem value="CPI">CPI - Critical Path (legacy)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Timeline */}
-              <div className="bg-card rounded-xl border border-border p-6">
-                <h3 className="text-sm font-medium text-[#1A1A1A] mb-6">Compliance Activity Timeline</h3>
-                <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
-                  {auditTrail.length > 0 ? (
-                    auditTrail.slice(0, 50).map((log: any, i: number) => (
-                      <div key={i} className="relative pl-8">
-                        <div className={`absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
-                          ? "border-green-600"
-                          : (log.action || "").toLowerCase().includes("overdue") || (log.action || "").toLowerCase().includes("rejected")
-                            ? "border-red-600"
-                            : "border-blue-600"
-                          }`} />
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>
-                            {log.taskType && (
-                              <Badge className="bg-muted text-[#6B7280] border-none text-xs">
-                                {log.taskType}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatDate(log.created_at || log.createdAt)}{" "}
-                            &middot; {log.createdByName || "System"}
-                          </p>
-                          {log.description && (
-                            <p className="mt-1 text-xs text-gray-600 line-clamp-2">
-                              {log.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="relative pl-8">
-                      <div className="absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 border-border rounded-full z-10" />
-                      <p className="text-xs text-gray-400">
-                        {isLoading ? (
-                          <AwesomeLoader message="Compiling audit trail" />
-                        ) : "No audit activity recorded yet — every action taken on this project is logged here with its author and timestamp."}
-                      </p>
-                    </div>
+                  </div>
+                  <p className="text-xs text-[#6B7280] mt-1">
+                    {formatDate(e.created_at)} &middot; {e.createdByName ?? "No user recorded"}
+                  </p>
+                  {e.description && (
+                    <p className="mt-1 text-xs text-[#4B5563] line-clamp-2">{e.description}</p>
                   )}
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Section 3: JBCC Deadline Tracker */}
-            <TabsContent value="deadlines" className="mt-6">
-              {/* Filters */}
-              <div className="flex items-center gap-4 mb-6 flex-wrap">
-                <div className="flex items-center gap-2 text-[#6B7280]">
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm">Filters:</span>
-                </div>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[160px] bg-card border-border">
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="VO">VO</SelectItem>
-                    <SelectItem value="RFI">RFI</SelectItem>
-                    <SelectItem value="SI">SI</SelectItem>
-                    <SelectItem value="DC">Claim</SelectItem>
-                    <SelectItem value="CPI">CPI</SelectItem>
-                    <SelectItem value="GI">GI</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={deadlineFilter} onValueChange={setDeadlineFilter}>
-                  <SelectTrigger className="w-[160px] bg-card border-border">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="at-risk">At Risk</SelectItem>
-                    <SelectItem value="on-track">On Track</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Deadline Summary Cards */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <Card className="bg-red-50 border-red-200 shadow-none rounded-xl">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                    <div>
-                      <p className="text-2xl font-medium text-red-900">
-                        {complianceData.deadlines.filter((d) => d.daysRemaining < 0 && !d.isCompleted).length}
-                      </p>
-                      <p className="text-xs text-red-700">Overdue</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50 border-amber-200 shadow-none rounded-xl">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                    <div>
-                      <p className="text-2xl font-medium text-amber-900">
-                        {complianceData.deadlines.filter((d) => d.daysRemaining >= 0 && d.daysRemaining <= 3 && !d.isCompleted).length}
-                      </p>
-                      <p className="text-xs text-amber-700">At Risk</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-green-50 border-green-200 shadow-none rounded-xl">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-2xl font-medium text-green-900">
-                        {complianceData.deadlines.filter((d) => d.daysRemaining > 3 && !d.isCompleted).length}
-                      </p>
-                      <p className="text-xs text-green-700">On Track</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Deadline Table */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow className="hover:bg-muted/50">
-                      <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Task #</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Type</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">JBCC Clause</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Requirement</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Deadline</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Days Remaining</TableHead>
-                      <TableHead className="text-[#6B7280] font-normal">Assigned To</TableHead>
-                      <TableHead className="pr-6 text-right text-[#6B7280] font-normal">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDeadlines.length > 0 ? (
-                      filteredDeadlines.map((d, i) => (
-                        <TableRow key={i} className="hover:bg-muted/50 border-b border-border last:border-0">
-                          <TableCell className="pl-6 py-4 text-sm font-medium text-[#1A1A1A]">
-                            {d.taskNumber}
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <Badge className="bg-muted text-[#1A1A1A] border-none text-xs">
-                              {d.taskType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="py-4 text-sm text-[#6B7280]">{d.clause}</TableCell>
-                          <TableCell className="py-4 text-sm text-[#1A1A1A]">{d.label}</TableCell>
-                          <TableCell className="py-4 text-sm text-[#6B7280]">{formatDate(d.deadline)}</TableCell>
-                          <TableCell className="py-4">
-                            {d.isCompleted ? (
-                              <span className="text-sm text-green-600">Completed</span>
-                            ) : (
-                              <span className={`text-sm font-medium ${d.daysRemaining < 0 ? "text-red-600" : d.daysRemaining <= 3 ? "text-amber-600" : "text-green-600"}`}>
-                                {d.daysRemaining < 0
-                                  ? `${Math.abs(d.daysRemaining)} days overdue`
-                                  : d.daysRemaining === 0
-                                    ? "Due today"
-                                    : `${d.daysRemaining} days`}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-4 text-sm text-[#1A1A1A]">{d.assignedTo}</TableCell>
-                          <TableCell className="pr-6 py-4 text-right">
-                            {d.isCompleted ? (
-                              <Badge className="bg-green-50 text-green-700 border-green-200 border text-xs">
-                                Completed
-                              </Badge>
-                            ) : (
-                              <Badge className={`${d.status.color} border text-xs`}>
-                                {d.status.label}
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-[#6B7280] text-sm">
-                          {isLoading ? "Loading deadline data..." : "No deadlines match the current filter"}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-
-            {/* Section 4: Export & Reports */}
-            {accessLevel === "full" && (
-              <TabsContent value="export" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Export CSV */}
-                  <Card className="bg-card border border-border shadow-none rounded-xl">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-[#1A1A1A]">Export CSV</h3>
-                          <p className="text-xs text-[#6B7280]">Download compliance data as CSV</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-[#6B7280] mb-4">
-                        Export all JBCC deadline data including task numbers, clauses, deadlines,
-                        and current status for all document types.
-                      </p>
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        onClick={exportCSV}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download CSV
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  {/* Print Report */}
-                  <Card className="bg-card border border-border shadow-none rounded-xl">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                          <Printer className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-[#1A1A1A]">Print Report</h3>
-                          <p className="text-xs text-[#6B7280]">Print compliance summary</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-[#6B7280] mb-4">
-                        Generate a printer-friendly compliance report with overview stats,
-                        deadline tracking, and audit trail summary.
-                      </p>
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        onClick={() => window.print()}>
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print Report
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  {/* Summary Stats */}
-                  <Card className="bg-card border border-border shadow-none rounded-xl">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-primary/5 rounded-lg flex items-center justify-center">
-                          <TrendingUp className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-[#1A1A1A]">Report Summary</h3>
-                          <p className="text-xs text-[#6B7280]">Quick compliance overview</p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-[#6B7280]">Total Tasks</span>
-                          <span className="text-sm font-medium text-[#1A1A1A]">{complianceData.totalTasks}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-[#6B7280]">Compliant</span>
-                          <span className="text-sm font-medium text-green-600">{complianceData.compliantTasks}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-[#6B7280]">Overdue</span>
-                          <span className="text-sm font-medium text-red-600">{complianceData.overdueItems}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-[#6B7280]">Compliance Score</span>
-                          <span className="text-sm font-medium text-[#1A1A1A]">{complianceData.score}%</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-border">
-                          <span className="text-xs text-[#6B7280]">Risk Level</span>
-                          <Badge className={`${riskColors[complianceData.riskLevel]} border text-xs`}>
-                            {complianceData.riskLevel}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            )}
-        </Tabs>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

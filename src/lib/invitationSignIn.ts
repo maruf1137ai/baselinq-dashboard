@@ -8,6 +8,8 @@
  * and send the invitee through /login and back to the invitation.
  */
 
+import { hasSession } from "@/lib/authSession";
+
 const INVITATION_PATH = /^\/accept-(?:appointed-)?invitation\/[A-Za-z0-9_-]+\/?$/;
 
 /**
@@ -29,7 +31,7 @@ export function loginUrlFor(invitationPath: string): string {
 /** The email of the account this browser is signed in as, lower-cased. */
 export function signedInEmail(): string | null {
   try {
-    if (!localStorage.getItem("access")) return null;
+    if (!hasSession()) return null;
     const user = JSON.parse(localStorage.getItem("user") || "null");
     const email = typeof user?.email === "string" ? user.email.trim().toLowerCase() : "";
     return email || null;

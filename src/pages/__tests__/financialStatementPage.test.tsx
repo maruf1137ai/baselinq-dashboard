@@ -4,16 +4,25 @@
  * this browser.
  */
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetched: string[] = [];
+const fetchState: { data: any; isLoading: boolean; isError: boolean; error: any } = {
+  data: undefined,
+  isLoading: true,
+  isError: false,
+  error: null,
+};
 vi.mock("@/hooks/useFetch", () => ({
   default: (url: string) => {
     fetched.push(url);
-    return { data: undefined, isLoading: true, isError: false };
+    return fetchState;
   },
+}));
+vi.mock("@/components/commons/AwesomeLoader", () => ({
+  AwesomeLoader: ({ message }: { message?: string }) => <div>{message}</div>,
 }));
 
 import FinancialStatementPage from "../FinancialStatementPage";
@@ -27,6 +36,14 @@ const open = (path: string) =>
     </MemoryRouter>,
   );
 
+beforeEach(() => {
+  localStorage.clear();
+  fetchState.data = undefined;
+  fetchState.isLoading = true;
+  fetchState.isError = false;
+  fetchState.error = null;
+});
+
 describe("the statement page", () => {
   it("reads the project the link names", () => {
     localStorage.setItem("selectedProjectId", "45");
@@ -38,5 +55,37 @@ describe("the statement page", () => {
     localStorage.setItem("selectedProjectId", "45");
     open("/finance/statement");
     expect(fetched.at(-1)).toBe("projects/45/financial-position/");
+  });
+
+  // The route no longer checks the selected project's permissions, so the
+  // server's answer about the linked project is what the reader sees.
+  it("says a refusal is a refusal", () => {
+    fetchState.isLoading = false;
+    fetchState.isError = true;
+    fetchState.error = { status: 403 };
+    open("/finance/statement?projectId=46");
+    expect(screen.getByText("This statement is not visible to your role")).toBeInTheDocument();
+  });
+
+  it("says when the linked project cannot be found", () => {
+    fetchState.isLoading = false;
+    fetchState.isError = true;
+    fetchState.error = { status: 404 };
+    open("/finance/statement?projectId=46");
+    expect(screen.getByText("This project could not be found")).toBeInTheDocument();
+  });
+
+  it("does not present an outage as a refusal", () => {
+    fetchState.isLoading = false;
+    fetchState.isError = true;
+    fetchState.error = { status: 500 };
+    open("/finance/statement?projectId=46");
+    expect(screen.getByText("The financial position could not be loaded")).toBeInTheDocument();
+  });
+
+  it("says so when neither the link nor the browser names a project", () => {
+    fetchState.isLoading = false;
+    open("/finance/statement");
+    expect(screen.getByText("This link does not name a project")).toBeInTheDocument();
   });
 });

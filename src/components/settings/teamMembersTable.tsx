@@ -3,6 +3,7 @@ import { getStatusBadgeClasses } from "@/lib/statusColors";
 import { Category, LedgerEntry } from "../finance/costLadger";
 import { MoreHorizontal, ChevronsUpDown, Check, User as UserIcon, Mail, X } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -85,13 +86,6 @@ const getOrgName = (org: Organization | string | null): string | null => {
   if (typeof org === "string") return org;
   return org.name ?? null;
 };
-
-interface UsersResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: User[];
-}
 
 interface Role {
   id?: number;
@@ -402,7 +396,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   // filter was opt-in. Adding `my_org=true` here would narrow the dropdown to
   // one company again and break the cross-company case; it is not what closed
   // the leak, and it is not needed to keep it closed.
-  const { data: allUsersData, isLoading: isLoadingUsers, error: usersError } = useFetch<UsersResponse>("auth/users/?page_size=500");
+  // Every page: `page_size=500` was ignored by the server, so the 21st user
+  // could never be added to the team.
+  const { data: allUsersData, isLoading: isLoadingUsers, error: usersError } = useAllPages<User>("auth/users/");
   const { data: rolesData, refetch: refetchRoles } = useFetch<Role[]>("auth/roles/");
 
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -412,7 +408,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const teamMembers = projectUsersData?.teamMembers || [];
-  const allUsers = allUsersData?.results || [];
+  const allUsers = allUsersData?.rows || [];
   const roles = (rolesData || []).filter(r => r.code && r.is_active !== false).sort((a, b) => a.name.localeCompare(b.name));
 
   const { data: user } = useCurrentUser();
@@ -604,6 +600,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                         <Command>
                           <CommandInput placeholder="Search users…" className="text-xs" />
                           <CommandList>
+                            {usersError && (
+                              <p role="alert" className="text-xs text-destructive py-3 px-3">
+                                Users couldn't be loaded. Reload the page to try again.
+                              </p>
+                            )}
                             <CommandEmpty className="text-xs text-[#9ca3af] py-4 text-center">No users match this search</CommandEmpty>
                             <CommandGroup>
                               {availableUsers.map((u) => {

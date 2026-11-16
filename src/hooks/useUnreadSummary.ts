@@ -22,6 +22,7 @@ import {
   getSocketHealthy,
   subscribeSocketHealth,
 } from "./useUserEventSocket";
+import { hasSession } from "@/lib/authSession";
 
 export interface UnreadSummary {
   /** Unread notifications (all types) in scope. Drives the bell badge. */
@@ -104,7 +105,7 @@ export function useUnreadSummary() {
         channels: raw?.channels ?? 0,
       };
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("access"),
+    enabled: hasSession(),
     refetchInterval: socketHealthy ? POLL_MS_WS_HEALTHY : POLL_MS_NO_SOCKET,
     // A badge is ambient — showing the last known number for a moment beats
     // flashing an empty one on every remount.

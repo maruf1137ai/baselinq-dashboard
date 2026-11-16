@@ -86,6 +86,16 @@ describe("the countdown badge", () => {
     expect(screen.getByText("3 working days overdue")).toBeInTheDocument();
   });
 
+  it("says when a deadline includes the builders' break, and only then", () => {
+    fetchMock.mockReturnValue(state({
+      data: { time_bars: [bar({ spans_shutdown: true, deadline_date: "2027-01-19" }), bar({ id: 2 })] },
+    }));
+    render(<TimeBarsTab projectId="1" />);
+
+    expect(screen.getByTestId("time-bar-1")).toHaveTextContent("includes builders' break");
+    expect(screen.getByTestId("time-bar-2")).not.toHaveTextContent("builders' break");
+  });
+
   it("does not rebuild the sentence when the backend did not send one", () => {
     const c = describeCountdown({
       days_remaining: 12,

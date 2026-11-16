@@ -54,6 +54,36 @@ describe("TaxInvoiceSection", () => {
     expect(mockPost.mock.calls[0][0].data.invoiceNumber).toBe("INV-42");
   });
 
+  it("refreshes the financial position and its alerts, so \"Tax invoice missing\" clears", async () => {
+    // Review finding F12, 13 Nov 2026: only the tax-invoice query was
+    // invalidated, and the alert (worked out live on the financial position)
+    // stayed on screen after the invoice was issued.
+    response = { invoice: draft, cancelled: [], canEdit: true };
+    const client = new QueryClient();
+    const keys = {
+      invoice: "payment-certificates/48/tax-invoice/",
+      position: "projects/45/financial-position/",
+      alerts: "projects/45/financial-position/alerts/?page=1&pageSize=5&codes=TAX_INVOICE_MISSING",
+      unrelated: "projects/45/payments/",
+    };
+    Object.values(keys).forEach((k) => client.setQueryData([k], {}));
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <TaxInvoiceSection certificateId={48} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Issue on the contractor's behalf…" }));
+    fireEvent.change(screen.getByLabelText("Contractor's invoice number"), { target: { value: "INV-42" } });
+    fireEvent.click(screen.getByRole("button", { name: "Issue" }));
+
+    await waitFor(() => expect(client.getQueryState([keys.invoice])?.isInvalidated).toBe(true));
+    expect(client.getQueryState([keys.position])?.isInvalidated).toBe(true);
+    expect(client.getQueryState([keys.alerts])?.isInvalidated).toBe(true);
+    expect(client.getQueryState([keys.unrelated])?.isInvalidated).toBe(false);
+  });
+
   it("names what is missing when the server refuses", async () => {
     response = { invoice: draft, cancelled: [], canEdit: true };
     mockPost.mockRejectedValueOnce({

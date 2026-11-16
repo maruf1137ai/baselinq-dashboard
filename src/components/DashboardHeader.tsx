@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { CreateDocumentDialog } from "./header/createDocument";
 import CreateRequestButton from "./header/CreateRequestButton";
 import AiButton from "./AiButton";
 import NavbarWeather from "./NavbarWeather";
@@ -215,7 +214,15 @@ export function DashboardHeader() {
           ) : (
             <>
               <CreateRequestButton />
-              <button>
+              {/* Opens Linq. It used to be a bare <button> with no handler: an
+                  AI control on every page that did nothing. */}
+              <button
+                type="button"
+                onClick={() => navigate("/ai-workspace")}
+                aria-label="Open Linq"
+                title="Open Linq"
+                className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <AiButton />
               </button>
               <Button

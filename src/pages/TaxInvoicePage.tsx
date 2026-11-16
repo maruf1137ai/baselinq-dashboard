@@ -10,7 +10,7 @@
  * and a cancelled invoice say so across the page.
  */
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertCircle, ArrowLeft, Printer } from "lucide-react";
+import { AlertCircle, ArrowLeft, Lock, Printer, SearchX } from "lucide-react";
 
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ function PartyBlock({ title, party }: { title: string; party: TaxInvoiceParty })
 export default function TaxInvoicePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useFetch<TaxInvoice>(id ? `tax-invoices/${id}/` : "", { enabled: !!id });
+  const { data, isLoading, isError, error } = useFetch<TaxInvoice>(id ? `tax-invoices/${id}/` : "", { enabled: !!id });
   // Printed outside the app's layout, so it takes its currency from the invoice.
   setActiveCurrency(data?.currency);
 
@@ -47,13 +47,31 @@ export default function TaxInvoicePage() {
     );
   }
   if (isError || !data) {
+    // The route checks only that someone is signed in; the server checks the
+    // invoice's own project. It answers 404 for an invoice the viewer may not
+    // see as well as for one that does not exist, so the copy covers both.
+    const status = Number((error as { status?: number } | null)?.status);
     return (
       <div className="min-h-screen bg-background px-4 py-10">
-        <EmptyState
-          icon={AlertCircle}
-          title="This tax invoice could not be loaded"
-          description="It may not exist, or it belongs to a project you do not have finance access on."
-        />
+        {status === 403 ? (
+          <EmptyState
+            icon={Lock}
+            title="This tax invoice is not visible to your role"
+            description="Tax invoices are visible to people with finance access on the project they belong to."
+          />
+        ) : status === 404 ? (
+          <EmptyState
+            icon={SearchX}
+            title="This tax invoice could not be found"
+            description="It may not exist, or it belongs to a project you do not have finance access on."
+          />
+        ) : (
+          <EmptyState
+            icon={AlertCircle}
+            title="This tax invoice could not be loaded"
+            description="This is a loading problem, not a statement that nothing is owed. Try again shortly."
+          />
+        )}
       </div>
     );
   }

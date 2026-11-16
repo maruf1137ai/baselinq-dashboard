@@ -4,14 +4,13 @@ import { AiMark } from "@/components/icons/AiMark";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
+import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from "@/hooks/useAIJob";
 import { toast } from "sonner";
 import { AIMarkdown } from "./AIMarkdown";
 import { AnswerFeedback } from "./AnswerFeedback";
-import { PriceBreakdown } from "./PriceBreakdown";
 import { LegacyPriceNotice } from "./LegacyPriceNotice";
 import { RFIAnalysisSummary } from "./RFIAnalysisSummary";
 import { CitationPill } from "./CitationPill";
-import { type AnalysisReportProps } from "./AnalysisReport";
 import { analysisSummary } from "./analysisMarkdown";
 import { shownSources, type ChatSource } from "@/types/citation";
 
@@ -33,6 +32,21 @@ interface Message {
   price_check_legacy?: boolean;
 }
 
+/** The task page's analysis request, as the chat renders it. */
+interface TaskAnalysisState {
+  isLoading: boolean;
+  /** The analysis response: { analysis, price_breakdown?, mock_used, cached, model_name, cached_at? }. */
+  analysisData: any | null;
+  taskType?: string;
+  taskId?: string;
+  /** What the background job is doing now (e.g. "analysing"). */
+  stage?: string | null;
+  /** A readable failure from the backend; shown instead of a result. */
+  error?: string | null;
+  /** Run the analysis again (force refresh). */
+  onRerun?: () => void;
+}
+
 interface AIChatInterfaceProps {
   taskType: string;
   data: any;
@@ -41,7 +55,7 @@ interface AIChatInterfaceProps {
    * welcome message. The task page owns the request and the job polling, so the chat only renders
    * what it is given. Absent means the analysis was never started for this task.
    */
-  analysis?: AnalysisReportProps & { show?: boolean };
+  analysis?: TaskAnalysisState & { show?: boolean };
 }
 
 export function AIChatInterface({ taskType, data, analysis }: AIChatInterfaceProps) {
@@ -60,6 +74,8 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
   const [historyLoaded, setHistoryLoaded] = useState(false);
   // Part 8c: a chat that couldn't start says why (no invented "I've analysed the documentation" greeting).
   const [initError, setInitError] = useState<string | null>(null);
+  // W1-b: the reply is a background job; its stage is shown while Linq works on it.
+  const [job, setJob] = useState<AIJob | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const taskTypeId = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
@@ -89,10 +105,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           setHistoryLoaded(true);
           setIsInitializing(true);
           try {
-            const initResponse = await postData({
+            const initResponse = await resolveAIJob(await postData({
               url: chatUrl,
-              data: { action: "init" },
-            });
+              data: { action: "init", ...ASYNC_AI },
+            }), { onUpdate: setJob });
             if (initResponse?.messages && initResponse.messages.length > 0) {
               const loaded: Message[] = initResponse.messages.map((m: any) => ({
                 serverId: typeof m.id === 'number' ? m.id : undefined,
@@ -111,6 +127,7 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
               || "Linq couldn't start this chat. Please try again.");
           } finally {
             setIsInitializing(false);
+            setJob(null);
           }
         }
       } catch (err) {
@@ -154,10 +171,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
     setError(null);
 
     try {
-      const response = await postData({
+      const response = await resolveAIJob(await postData({
         url: chatUrl,
-        data: { message: text }
-      });
+        data: { message: text, ...ASYNC_AI }
+      }), { onUpdate: setJob });
 
       const assistantMessage: Message = {
         serverId: typeof response.messageId === 'number' ? response.messageId : undefined,
@@ -178,6 +195,7 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
       // Or just leave it and show error.
     } finally {
       setIsTyping(false);
+      setJob(null);
     }
   };
 
@@ -233,10 +251,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           )}
         </div>
 
-        {/* VO: labelled AI price estimates; RFI: inline analysis summary; older VO gets a notice. */}
+        {/* RFI: inline analysis summary; an older VO message gets a notice. The VO table of AI
+            price ranges is no longer shown: they were uncited guesses, not rates from any source. */}
         {msg.role === 'assistant' && (
           <div className="w-full">
-            <PriceBreakdown priceData={msg.price_breakdown} />
             <RFIAnalysisSummary data={msg.price_breakdown} />
             {msg.price_check_legacy && <LegacyPriceNotice />}
           </div>
@@ -299,12 +317,13 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           //     </p>
           //   </div>
           // </div>
-          <div className="flex items-center justify-center min-h-[300px]">
+          <div className="flex flex-col items-center justify-center gap-3 min-h-[300px]">
             <div className="ai-orb-loader">
               <div className="ai-orb-wave" />
               <div className="ai-orb-wave" />
               <div className="ai-orb-wave" />
             </div>
+            {job && <span role="status" className="text-xs text-primary/60 font-medium">{jobStatusLabel(job)}</span>}
           </div>
         )}
 
@@ -333,7 +352,9 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
                 <div className="ai-orb-wave" />
                 <div className="ai-orb-wave" />
               </div>
-              <span className="text-xs text-primary/60 font-medium animate-pulse">Analyzing context...</span>
+              <span role="status" className="text-xs text-primary/60 font-medium animate-pulse">
+                {isTyping && job ? jobStatusLabel(job) : "Analyzing context..."}
+              </span>
             </div>
           </div>
         )}

@@ -11,6 +11,11 @@ export interface TimeBarCountdownInput {
   days_remaining: number | null;
   days_remaining_unit?: string | null;
   days_remaining_label?: string | null;
+  /**
+   * The deadline DATE has passed, from the server. True on the Saturday after
+   * a Friday deadline, when `days_remaining` is 0 working days.
+   */
+  overdue?: boolean | null;
   status: string;
   /** Whether a served notice was in time — the server's verdict, never ours. */
   service?: { timing?: { on_time: boolean } | null } | null;
@@ -102,7 +107,7 @@ function describeRawCountdown(bar: TimeBarCountdownInput): Countdown {
   }
 
   const threshold = dueSoonThreshold(normaliseDayUnit(bar.days_remaining_unit));
-  if (days < 0) return { text: label, tone: "overdue" };
+  if (days < 0 || bar.overdue === true) return { text: label, tone: "overdue" };
   if (days <= 3) return { text: label, tone: "urgent" };
   if (days <= threshold) return { text: label, tone: "soon" };
   return { text: label, tone: "safe" };

@@ -45,7 +45,7 @@ import { useUpdateProject, useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import {
   Command,
   CommandEmpty,
@@ -802,8 +802,13 @@ export default function EditProject() {
   const [inviteUserForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
   const [inviteUserSubmitting, setInvitePersonnelSubmitting] = useState(false);
 
-  const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
-  const orgUsers: OrgUser[] = orgUsersData?.results || [];
+  // Every page: `page_size=500` was ignored by the server, so only the first
+  // twenty users of the company could be picked.
+  const { data: orgUsersData, isError: orgUsersError } = useAllPages<OrgUser>('auth/users/?my_org=true');
+  const orgUsers: OrgUser[] = orgUsersData?.rows || [];
+  useEffect(() => {
+    if (orgUsersError) toast.error("Your company's users couldn't be loaded. Reload the page to try again.");
+  }, [orgUsersError]);
 
   const handleInvitePersonnelSubmit = async () => {
     if (!inviteUserForm.email.trim() || !inviteUserForm.role_code) return;

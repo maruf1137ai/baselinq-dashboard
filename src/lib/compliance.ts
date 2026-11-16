@@ -139,6 +139,8 @@ export interface ComplianceRow {
   /** Time-bar rows only. */
   clauseRef?: string;
   clauseVerified?: boolean;
+  /** Time-bar rows only: the builders' break falls inside the notice period. */
+  spansShutdown?: boolean;
 }
 
 export interface ComplianceCounts {
@@ -174,6 +176,9 @@ export interface ApiTimeBar {
   days_remaining_unit?: string | null;
   /** e.g. "12 working days remaining". Rendered verbatim; never rebuilt. */
   days_remaining_label?: string | null;
+  /** The deadline date has passed, even with no working day since (a weekend). */
+  overdue?: boolean | null;
+  spans_shutdown?: boolean | null;
   status: string;
 }
 
@@ -360,7 +365,7 @@ export function buildTimeBarRows(bars: ApiTimeBar[], today: Date): ComplianceRow
       ? "closed"
       : days === null
         ? "no-date"
-        : days < 0
+        : days < 0 || b.overdue === true
           ? "overdue"
           : days <= dueSoonThreshold(daysUnit)
             ? "due-soon"
@@ -382,6 +387,7 @@ export function buildTimeBarRows(bars: ApiTimeBar[], today: Date): ComplianceRow
       countdownLabel: !isClosed && label ? label : undefined,
       clauseRef: b.clause_ref,
       clauseVerified: b.clause_verified,
+      spansShutdown: b.spans_shutdown === true,
     };
   });
 }
@@ -447,7 +453,8 @@ export function urgencyLabel(row: ComplianceRow): string {
 
   switch (row.urgency) {
     case "overdue":
-      return days === null || unit === null ? "Overdue" : countdownPhrase(days, unit);
+      // 0 days and overdue is the weekend after a deadline: never "due today".
+      return days === null || unit === null || days >= 0 ? "Overdue" : countdownPhrase(days, unit);
     case "due-soon":
       if (days === null) return "No date recorded";
       return unit === null ? "Due soon" : countdownPhrase(days, unit);

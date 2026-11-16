@@ -158,3 +158,12 @@ describe("/compliance?obligation=", () => {
     expect(screen.queryByText(/not found/i)).not.toBeInTheDocument();
   });
 });
+
+describe("the header action", () => {
+  // No AI analysis runs on this page; the button takes the user to Documents, and says so.
+  it("is labelled for what it does, not \"Analyse with AI\"", async () => {
+    renderCompliance("/compliance");
+    expect(await screen.findByRole("button", { name: "Find obligations in a document" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analyse with AI/ })).not.toBeInTheDocument();
+  });
+});

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { getVapidPublicKey, subscribeToPush } from "@/lib/notificationApi";
+import { hasSession } from "@/lib/authSession";
 
 // ArrayBuffer-backed, as PushManager.subscribe requires (TS 5.7 made Uint8Array generic).
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -20,8 +21,7 @@ export function useWebPush() {
     if (initialized.current) return;
     initialized.current = true;
 
-    const token = localStorage.getItem("access");
-    if (!token) return;
+    if (!hasSession()) return;
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 

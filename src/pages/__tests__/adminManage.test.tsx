@@ -130,6 +130,20 @@ describe("Users page", () => {
     await waitFor(() => expect(api.postAdminUserAction).toHaveBeenCalledWith(7, "deactivate", "Left the company"));
   });
 
+  it("resets two-step sign-in only with a reason, and only when it is on", async () => {
+    api.getAdminUser.mockResolvedValue({ ...patDetail, twoStepEnrolled: true });
+    api.postAdminUserAction.mockResolvedValue({ ...patDetail, twoStepEnrolled: false });
+    draw(<AdminUsers />);
+    fireEvent.click(await screen.findByText("Pat Builder"));
+    fireEvent.click(await screen.findByRole("button", { name: "Reset two-step" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset two-step sign-in?" });
+    const confirm = within(dialog).getByRole("button", { name: "Reset two-step" });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "Lost phone, called in" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(api.postAdminUserAction).toHaveBeenCalledWith(7, "reset_two_step", "Lost phone, called in"));
+  });
+
   it("shows invitations with resend and cancel only where they apply", async () => {
     api.getAdminInvitations.mockResolvedValue(page([
       { id: 1, email: "new@x.test", name: "", position: "", type: "Client", status: "expired", invitedBy: "Ada",

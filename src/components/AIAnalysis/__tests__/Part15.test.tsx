@@ -109,7 +109,7 @@ describe("document drawer regenerate", () => {
     expect(screen.queryByText("First answer.")).toBeNull();
     expect(screen.getAllByText("Who may vary the works?")).toHaveLength(1);
     expect(api.postData).toHaveBeenCalledWith({
-      url: "documents/47/chat-with-documents/", data: { regenerate: true, projectId: "47" },
+      url: "documents/47/chat-with-documents/", data: { regenerate: true, projectId: "47", async: true },
     });
   });
 });
@@ -131,5 +131,43 @@ describe("Linq chat that can't be loaded", () => {
     expect(card).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("Hello! I've analyzed");
+  });
+});
+
+describe("Linq project chat answered by a background job (W1-b)", () => {
+  it("asks for a job, shows Working… while it runs, then the reply and the new session", async () => {
+    api.postData.mockResolvedValue({
+      status: "queued", job_id: "j9",
+      job: { id: "j9", kind: "ai_request", status: "running", stage: "writing the answer", progress: 20,
+             error_code: "", message: "", result: null, created_at: null, finished_at: null },
+    });
+    // The job, then (once the page moves to the new session's URL) that session's saved history.
+    api.fetchData.mockImplementation(async (url: string) => (url === "ai_analysis/jobs/j9/"
+      ? { id: "j9", kind: "ai_request", status: "succeeded", stage: "done", progress: 100, error_code: "",
+          message: "", created_at: null, finished_at: null,
+          result: { sessionId: 31, messageId: 8, reply: "Two delay claims are open.", sources: [], title: "Delays" } }
+      : { messages: [{ id: 7, role: "user", content: "Any delays?" },
+                     { id: 8, role: "assistant", content: "Two delay claims are open.", sources: [] }] }));
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={["/ai-workspace/project/47"]}>
+          <Routes>
+            <Route path="/ai-workspace/project/:projectId" element={<AiWorkSpace />} />
+            <Route path="/ai-workspace/project/:projectId/:sessionId" element={<AiWorkSpace />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByPlaceholderText("Drop your question here..."), { target: { value: "Any delays?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("Working… writing the answer")).toBeInTheDocument();
+    expect(api.postData).toHaveBeenCalledWith({ url: "ai_analysis/project/47/chat/", data: { message: "Any delays?", async: true } });
+    // The reply lands, and the page moves to the new session (which reloads its history): re-query, don't hold nodes.
+    await waitFor(() => expect(api.fetchData).toHaveBeenCalledWith("ai_analysis/project/47/chat/?session_id=31"),
+      { timeout: 5000 });
+    expect(api.fetchData).toHaveBeenCalledWith("ai_analysis/jobs/j9/");
+    await waitFor(() => expect(screen.getByText("Two delay claims are open.")).toBeInTheDocument());
+    expect(screen.queryByText(/Working…/)).not.toBeInTheDocument();
   });
 });

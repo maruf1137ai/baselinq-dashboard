@@ -1,3 +1,4 @@
+import { PageErrorBoundary } from "./ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
@@ -25,7 +26,7 @@ export function DashboardLayout({
           <DashboardHeader />
           <BillingLockBanner />
           <main className={`flex-1 ${padding} bg-background ${overflow}`}>
-            {children}
+            <PageErrorBoundary>{children}</PageErrorBoundary>
           </main>
         </div>
       </div>

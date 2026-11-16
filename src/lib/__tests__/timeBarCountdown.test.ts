@@ -34,6 +34,12 @@ describe("the urgency colour of a live deadline", () => {
     expect(TONE_VARIANT[c.tone]).toBe(variant);
   });
 
+  it("colours the Saturday after a Friday deadline as overdue, not due today", () => {
+    const label = "overdue (deadline passed; today is not a working day)";
+    const c = describeCountdown({ ...open(0, label), overdue: true });
+    expect(c).toEqual({ text: label, tone: "overdue" });
+  });
+
   it("never colours three days or fewer like a closed notice — the inversion", () => {
     const closedVariants = new Set([
       variantOf({ ...open(2, "x"), status: "cancelled" }),

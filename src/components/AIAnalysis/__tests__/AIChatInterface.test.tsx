@@ -4,7 +4,7 @@
  * heading block of its own — so it is readable wherever the chat is, and a chat that failed to
  * start cannot hide an analysis that succeeded.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,6 +59,40 @@ beforeEach(() => {
   api.fetchData.mockReset();
   Element.prototype.scrollTo = vi.fn() as unknown as typeof Element.prototype.scrollTo;
   Element.prototype.scrollIntoView = vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
+});
+
+describe("VO price ranges", () => {
+  // The backend still attaches its AI price ranges to a VO message. They cite no source (the
+  // model's general knowledge), so the chat no longer draws them as a table.
+  const priceBreakdown = {
+    schema_version: 2,
+    status: "ai_estimate",
+    label: "AI estimate — not verified",
+    disclaimer: "Indicative ranges produced by an AI model from general knowledge.",
+    source: "ai_estimate",
+    currency: "ZAR",
+    total_claimed: 45000,
+    counts: { estimated: 1, not_verified: 0, above_range: 1, within_range: 0, below_range: 0 },
+    items: [{
+      index: 1, description: "Concrete 30 MPa", quantity: 25, claimed_unit_rate: 1800, claimed_total: 45000,
+      status: "ai_estimate", estimate: { unit: "m³", low: 1400, typical: 1600, high: 1750, basis: "Ready-mix." },
+      position: "above_range", variance_vs_estimate_pct: 12.5, note: "",
+    }],
+  };
+
+  it("are not shown under a VO message", async () => {
+    api.fetchData.mockResolvedValue(welcome({ content: "I've reviewed VO-015.", price_breakdown: priceBreakdown }));
+    render(
+      <MemoryRouter>
+        <AIChatInterface taskType="VO" data={{ id: 9, type: "VO" }} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("I've reviewed VO-015.");
+    expect(screen.queryByRole("region", { name: "AI price estimates" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/R 1,400\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText("AI estimate — not verified")).not.toBeInTheDocument();
+  });
 });
 
 describe("the analysis as a chat message", () => {
@@ -143,5 +177,56 @@ describe("the analysis as a chat message", () => {
     const button = await screen.findByRole("button", { name: "Re-run analysis" });
     button.click();
     expect(onRerun).toHaveBeenCalled();
+  });
+});
+
+describe("a reply that runs as a background job (W1-b)", () => {
+  it("asks for a job, says Working… while it runs, then shows the reply", async () => {
+    api.fetchData.mockImplementation(async (url: string) => (url.startsWith("ai_analysis/jobs/")
+      ? { id: "j1", kind: "ai_request", status: "succeeded", stage: "done", progress: 100, error_code: "",
+          message: "", result: { messageId: 9, reply: "Clause 17.1 lets the architect vary the works.", sources: [] },
+          created_at: null, finished_at: null }
+      : welcome()));
+    api.postData.mockResolvedValue({
+      status: "queued", job_id: "j1",
+      job: { id: "j1", kind: "ai_request", status: "running", stage: "writing the answer", progress: 20,
+             error_code: "", message: "", result: null, created_at: null, finished_at: null },
+    });
+    open(undefined);
+    await screen.findByText("I've reviewed SI-052 against your contract.");
+
+    fireEvent.change(screen.getByPlaceholderText(/Examine compliance/), { target: { value: "Who can vary the works?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("Working… writing the answer")).toBeInTheDocument();
+    expect(api.postData).toHaveBeenCalledWith({
+      url: "ai_analysis/si/7/chat/", data: { message: "Who can vary the works?", async: true },
+    });
+    expect(await screen.findByText("Clause 17.1 lets the architect vary the works.", {}, { timeout: 5000 }))
+      .toBeInTheDocument();
+    expect(screen.queryByText(/Working…/)).not.toBeInTheDocument();
+  });
+
+  it("shows the job's readable failure", async () => {
+    const { toast } = await import("sonner");
+    api.fetchData.mockImplementation(async (url: string) => (url.startsWith("ai_analysis/jobs/")
+      ? { id: "j2", kind: "ai_request", status: "failed", stage: "", progress: 0, error_code: "ai_timeout",
+          message: "The AI took too long to respond. Please try again.", result: null, created_at: null,
+          finished_at: null }
+      : welcome()));
+    api.postData.mockResolvedValue({
+      status: "queued", job_id: "j2",
+      job: { id: "j2", kind: "ai_request", status: "queued", stage: "", progress: 0, error_code: "", message: "",
+             result: null, created_at: null, finished_at: null },
+    });
+    open(undefined);
+    await screen.findByText("I've reviewed SI-052 against your contract.");
+
+    fireEvent.change(screen.getByPlaceholderText(/Examine compliance/), { target: { value: "Any delays?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("The AI took too long to respond. Please try again.", {}, { timeout: 5000 }))
+      .toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("The AI took too long to respond. Please try again.");
   });
 });

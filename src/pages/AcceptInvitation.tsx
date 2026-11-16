@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchInvitation, acceptInvitation } from "@/lib/Api";
 import { isSignedInAs, loginUrlFor } from "@/lib/invitationSignIn";
 import { cn } from "@/lib/utils";
+import { storeTokens } from "@/lib/authSession";
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
@@ -107,13 +108,12 @@ export default function AcceptInvitation() {
 
   const acceptMutation = useMutation({
     mutationFn: (payload: Parameters<typeof acceptInvitation>[1]) =>
-      acceptInvitation(token!, payload),
+      acceptInvitation(token!, payload, { asSignedInUser: isExistingUser }),
     onSuccess: (data) => {
       // A new account is signed in by the accept itself. An existing account
       // was already signed in, and keeps that session.
       if (data.tokens) {
-        localStorage.setItem("access", data.tokens.access);
-        localStorage.setItem("refresh", data.tokens.refresh);
+        storeTokens(data.tokens);
       }
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/account");

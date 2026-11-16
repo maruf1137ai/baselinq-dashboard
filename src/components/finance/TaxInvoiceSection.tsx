@@ -112,7 +112,16 @@ export function TaxInvoiceSection({
   // there looking as if nothing had happened.
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: [key] });
+  // "Tax invoice missing" is worked out live on the project's financial
+  // position and its alerts page (projects/{id}/financial-position/ and
+  // .../financial-position/alerts/), not on this URL. Refresh those too, or
+  // the alert stays on screen after the invoice is issued.
+  const refresh = () =>
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        q.queryKey[0] === key ||
+        (typeof q.queryKey[0] === "string" && /^projects\/[^/]+\/financial-position\//.test(q.queryKey[0])),
+    });
 
   const run = async (url: string, body: Record<string, unknown> | FormData, done: string) => {
     setBusy(true);

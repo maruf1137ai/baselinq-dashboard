@@ -260,6 +260,18 @@ describe("buildTimeBarRows", () => {
     expect(row.daysFromDue).toBe(-4);
   });
 
+  // The Saturday after a Friday deadline: 0 working days, and still late.
+  it("reports the weekend after a deadline as overdue, never due today", () => {
+    const [row] = buildTimeBarRows([bar({ days_remaining: 0, overdue: true, days_remaining_unit: "working" })], TODAY);
+    expect(row.urgency).toBe("overdue");
+    expect(urgencyLabel(row)).toBe("Overdue");
+  });
+
+  it("carries the builders' break note for a period that spans it", () => {
+    expect(buildTimeBarRows([bar({ spans_shutdown: true })], TODAY)[0].spansShutdown).toBe(true);
+    expect(buildTimeBarRows([bar()], TODAY)[0].spansShutdown).toBe(false);
+  });
+
   it("reports an open bar with no usable date as undated, not as a countdown", () => {
     const [row] = buildTimeBarRows(
       [bar({ days_remaining: null, deadline_date: null })],

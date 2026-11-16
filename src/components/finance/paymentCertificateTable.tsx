@@ -621,10 +621,11 @@ export const ApproveConfirmDialog = ({
             {line("Period", entry.period || "—")}
             {line("Claim", money(entry.claimAmount))}
             {takesRetention(entry) && line("Retention", money(entry.retentionAmount))}
-            {/* The step between claim and total. With VAT unrecorded it is the
-                only way to see whether the total includes VAT (a 15% gap). */}
-            {takesRetention(entry) &&
-              line("Claim less retention", money(Number(entry.claimAmount) - Number(entry.retentionAmount)))}
+            {/* No "claim less retention" line. It was worked out here, is on no
+                line of the certificate, and is not the amount VAT is charged on:
+                the server takes penalties and advance recovery at different
+                points (tasks/pc_integrity.py::recompute). Every figure here is
+                the server's. */}
             {line("VAT", vat === null ? "Not recorded" : money(vat))}
             {line("Total payable", money(payable), true)}
           </div>

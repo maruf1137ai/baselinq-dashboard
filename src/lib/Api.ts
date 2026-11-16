@@ -1,4 +1,14 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
+
+import {
+  clearTokens,
+  cookieMode,
+  getAccessToken,
+  getStoredRefreshToken,
+  hasSession,
+  storeTokens,
+} from "./authSession";
+import { loginUrlFor, safeNextPath } from "./invitationSignIn";
 
 // Project types
 export interface ProjectDocument {
@@ -66,26 +76,72 @@ const PUBLIC_AUTH_PATHS = [
   'auth/register/',
   'auth/check-email/',
   'auth/password/reset/',
+  'auth/two-step/verify/',
 ];
 
+/**
+ * An invitation's details and its accept, which the invitation page calls
+ * before anyone has signed in. Matched exactly, so the organisation and admin
+ * invitation endpoints keep their session.
+ *
+ * A stale token left in this browser failed the page's first read with 401;
+ * the refresh failed too, the session was cleared, and the invitee landed on
+ * /login with no way back to the invitation.
+ */
+const PUBLIC_INVITATION_PATH = /(?:^|\/)auth\/invitations\/[^/?#]+\/(?:accept\/)?(?:[?#]|$)/;
+
 export const isPublicAuthRequest = (url: string = ''): boolean =>
-  PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+  PUBLIC_AUTH_PATHS.some((path) => url.includes(path)) || PUBLIC_INVITATION_PATH.test(url);
+
+/**
+ * Request config. `withSession` sends the stored token to a public endpoint
+ * that also serves a signed-in caller: an existing account accepts an
+ * invitation only while signed in as the invitee.
+ */
+type SessionConfig = AxiosRequestConfig & { withSession?: boolean };
+
+/** Auth endpoints set, read or clear the refresh cookie (backend user/refresh_cookie.py). */
+export const isAuthRequest = (url: string = ''): boolean => /^\/?auth\//.test(url);
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("access");
-    if (token && !config.headers.Authorization && !isPublicAuthRequest(config.url)) {
+    const token = getAccessToken();
+    const wantsSession = (config as SessionConfig).withSession === true || !isPublicAuthRequest(config.url);
+    if (token && !config.headers.Authorization && wantsSession) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Cookie mode: auth calls carry the cookie (cross-site, so credentials)
+    // and ask for it with the header the backend's CSRF check requires.
+    if (cookieMode() && isAuthRequest(config.url)) {
+      config.withCredentials = true;
+      config.headers["X-Refresh-Cookie"] = "1";
     }
   }
   return config;
 });
 
+/**
+ * Where a session that cannot be refreshed is sent: /login, and back to the
+ * page it was on only when that page is an invitation (the `safeNextPath`
+ * allow-list /login itself applies). Any other path is dropped, so this can
+ * never become an open redirect.
+ */
+export const forcedLoginUrl = (currentPath: string = ''): string => {
+  const next = safeNextPath(currentPath);
+  return next ? loginUrlFor(next) : '/login';
+};
+
+const forceLogin = () => {
+  clearTokens();
+  localStorage.clear();
+  window.location.href = forcedLoginUrl(window.location.pathname);
+};
+
 const handleError = (error) => {
   // Surface the backend-provided message (e.g. DRF `error`/`detail`) so toasts
   // show the real reason instead of a bare "HTTP error! status: NNN". Only use a
   // string — DRF validation errors can be objects/arrays, which fall back to the
-  // status. Still throws an Error (no `.response`), preserving the prior contract.
+  // status. Still throws a plain Error, now with the axios `.response` attached.
   const data = error.response?.data;
   const backendMessage = [data?.error, data?.detail, data?.message].find(
     (m) => typeof m === "string" && m.trim().length > 0,
@@ -102,6 +158,17 @@ const handleError = (error) => {
   if (error.response) {
     err.status = error.response.status;
     if (typeof data?.code === "string") err.code = data.code;
+    // Callers are written against axios and read `err.response.data`: the
+    // refusal reason, field errors, the certificate integrity verdict. Without
+    // this they all got undefined and showed a generic failure instead.
+    // Non-enumerable so logging or serialising the error does not carry the
+    // whole response (config, request) with it.
+    Object.defineProperty(err, "response", {
+      value: error.response,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
   }
   throw err;
 };
@@ -193,8 +260,32 @@ export const loginUser = async ({
   password: string;
 }) => {
   const res = await api.post("auth/login/", { email, password });
-  return res.data; // { message, user, tokens: { access, refresh } }
+  // { message, user, tokens: { access, refresh }, twoStep }, or, when a code
+  // is needed first, { twoStep: "code_required" | "setup_required", preAuthToken }
+  return res.data;
 };
+
+// ── Two-step sign-in (backend twostep/) ──────────────────────────────────
+// The setup calls work signed in, or mid-sign-in with the pre-auth token
+// the password step returned (setup_required).
+export const getTwoStepStatus = async () => (await api.get("auth/two-step/status/")).data;
+
+export const startTwoStepSetup = async (preAuthToken?: string) =>
+  (await api.post("auth/two-step/setup/", preAuthToken ? { preAuthToken } : {})).data;
+
+export const confirmTwoStepSetup = async (code: string, preAuthToken?: string) =>
+  (await api.post("auth/two-step/setup/confirm/", preAuthToken ? { code, preAuthToken } : { code })).data;
+
+export const verifyTwoStep = async (
+  preAuthToken: string,
+  entry: { code: string } | { recoveryCode: string },
+) => (await api.post("auth/two-step/verify/", { preAuthToken, ...entry })).data;
+
+export const regenerateTwoStepRecoveryCodes = async (code: string) =>
+  (await api.post("auth/two-step/recovery-codes/", { code })).data;
+
+export const disableTwoStep = async (code: string) =>
+  (await api.post("auth/two-step/disable/", { code })).data;
 
 export interface RegisterPayload {
   // credentials
@@ -444,6 +535,8 @@ export interface AdminUserDetail extends AdminUserRow {
   loginLockedUntil: string | null;
   signingPinSet: boolean;
   signingPinLockedUntil: string | null;
+  /** Absent until the backend two-step branch is deployed. */
+  twoStepEnrolled?: boolean;
   activeDaysLast30: number;
   invitationsSent: number;
   projects: { id: number; name: string; number: string; status: string; role: string; isActive: boolean; owner: boolean }[];
@@ -452,7 +545,7 @@ export interface AdminUserDetail extends AdminUserRow {
 }
 
 export type AdminUserAction =
-  | "deactivate" | "reactivate" | "unlock" | "clear_pin"
+  | "deactivate" | "reactivate" | "unlock" | "clear_pin" | "reset_two_step"
   | "grant_staff" | "revoke_staff" | "grant_superuser" | "revoke_superuser";
 
 export interface AdminInvitationRow {
@@ -567,6 +660,18 @@ export const downloadAdminExport = async (path: "users" | "projects", params: Ad
   a.download = `baselinq-${path}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+};
+
+/**
+ * The cost ledger as CSV. Through the authenticated client, so an expired
+ * access token is refreshed rather than failing the export.
+ */
+export const downloadCostLedgerExport = async (projectId: string | number): Promise<Blob> => {
+  const res = await api.get("cost-ledger/export/", {
+    params: { project_id: projectId },
+    responseType: "blob",
+  });
+  return res.data as Blob;
 };
 
 export interface AdminCompanyRow {
@@ -804,8 +909,17 @@ export interface AcceptInvitationPayload {
 // request. An existing account must already be signed in as the invitee (the
 // backend refuses with 403 `sign_in_required` / `wrong_account` otherwise) and
 // keeps the session it has.
-export const acceptInvitation = async (token: string, payload: AcceptInvitationPayload) => {
-  const res = await api.post(`auth/invitations/${token}/accept/`, payload);
+//
+// `asSignedInUser` is for that existing account. A new account sends no
+// session: it has none, and one left in this browser by somebody else would
+// fail the request with 401 before the view runs.
+export const acceptInvitation = async (
+  token: string,
+  payload: AcceptInvitationPayload,
+  { asSignedInUser = false }: { asSignedInUser?: boolean } = {},
+) => {
+  const config: SessionConfig = { withSession: asSignedInUser };
+  const res = await api.post(`auth/invitations/${token}/accept/`, payload, config);
   return res.data as { message: string; user: object; tokens?: { access: string; refresh: string } };
 };
 
@@ -1331,13 +1445,23 @@ export const uploadFileToPresignedUrl = async (
 
 let refreshPromise: Promise<string> | null = null;
 
+/**
+ * Get a new access token, once per tab however many requests are waiting.
+ *
+ * Refresh tokens rotate and the old one is blacklisted, and every tab shares
+ * the tokens in localStorage. With a 15-minute access token, two tabs often
+ * refresh at the same moment with the same refresh token: the second is
+ * refused as blacklisted. That used to sign the user out of every tab. Now,
+ * if the stored refresh token changed while ours was in flight, another tab
+ * won the race and its new access token is used instead.
+ */
 const refreshAccessToken = (): Promise<string> => {
   if (refreshPromise) return refreshPromise;
+  if (cookieMode()) return refreshFromCookie();
 
-  const refresh = localStorage.getItem('refresh');
+  const refresh = getStoredRefreshToken();
   if (!refresh) {
-    localStorage.clear();
-    window.location.href = '/login';
+    forceLogin();
     return Promise.reject(new Error('No refresh token available'));
   }
 
@@ -1351,11 +1475,71 @@ const refreshAccessToken = (): Promise<string> => {
       }
       return newAccess;
     })
+    .catch(error => {
+      const storedRefresh = localStorage.getItem('refresh');
+      const storedAccess = localStorage.getItem('access');
+      if (storedRefresh && storedRefresh !== refresh && storedAccess) {
+        return storedAccess;
+      }
+      throw error;
+    })
     .finally(() => {
       refreshPromise = null;
     });
 
   return refreshPromise;
+};
+
+/**
+ * Cookie mode: the refresh token is an HttpOnly cookie shared by every tab,
+ * and it rotates on use. Two tabs refreshing at once would send the same
+ * cookie and the second would be refused, so tabs take turns through a Web
+ * Lock; the second then sends the cookie the first was given. Browsers
+ * without Web Locks retry once after a refusal for the same reason.
+ */
+const refreshFromCookie = (): Promise<string> => {
+  const once = () =>
+    api.post('auth/token/refresh/', {}).then(res => {
+      storeTokens({ access: res.data.access });
+      return res.data.access as string;
+    });
+  const locks = typeof navigator !== 'undefined' ? (navigator as any).locks : undefined;
+  const run: Promise<string> = locks?.request
+    ? locks.request('baselinq-token-refresh', once)
+    : once().catch(() => new Promise<string>(resolve => setTimeout(resolve, 300)).then(once));
+  refreshPromise = run.finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+};
+
+/**
+ * Cookie mode, on page load: the access token was only in memory, so a
+ * reload has none. Get one from the cookie before the app renders, so every
+ * screen and socket starts signed in. A dead session is cleared, and the
+ * protected routes then send the user to sign in.
+ */
+export const bootstrapSession = async (): Promise<void> => {
+  if (!cookieMode() || getAccessToken()) return;
+  // Switching on: a session the old build left in localStorage hands its
+  // refresh token over once, and gets the cookie back, so nobody has to
+  // sign in again on the day the flag is turned on.
+  const legacyRefresh = localStorage.getItem('refresh');
+  if (legacyRefresh) {
+    try {
+      const res = await api.post('auth/token/refresh/', { refresh: legacyRefresh });
+      storeTokens({ access: res.data.access });
+    } catch {
+      clearTokens();
+    }
+    return;
+  }
+  if (!hasSession()) return;
+  try {
+    await refreshAccessToken();
+  } catch {
+    clearTokens();
+  }
 };
 
 /**
@@ -1380,10 +1564,9 @@ api.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
 
-    // If the request that failed WAS the refresh token request → logout immediately
-    if (originalRequest.url.includes('auth/token/refresh/')) {
-      localStorage.clear();
-      window.location.href = '/login';
+    // The refresh request itself failed: refreshAccessToken decides whether
+    // that is a dead session (sign out, below) or another tab's rotation.
+    if (originalRequest?.url?.includes('auth/token/refresh/')) {
       return Promise.reject(error);
     }
 
@@ -1392,6 +1575,15 @@ api.interceptors.response.use(
     if (shouldRefreshOn401(error)) {
       originalRequest._retry = true;
 
+      // Another request or tab has already refreshed since this one was
+      // sent: replay with the stored token instead of refreshing again.
+      const storedAccess = getAccessToken();
+      const sentAuth = originalRequest.headers?.['Authorization'];
+      if (storedAccess && sentAuth && sentAuth !== 'Bearer ' + storedAccess) {
+        originalRequest.headers['Authorization'] = 'Bearer ' + storedAccess;
+        return api(originalRequest);
+      }
+
       try {
         const newAccess = await refreshAccessToken();
         originalRequest.headers['Authorization'] = 'Bearer ' + newAccess;
@@ -1399,9 +1591,8 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        // If refresh fails → logout gracefully
-        localStorage.clear();
-        window.location.href = '/login';
+        // The session is over (expired, revoked, or the company suspended).
+        forceLogin();
         return Promise.reject(refreshError);
       }
     }

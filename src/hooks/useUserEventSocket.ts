@@ -19,6 +19,7 @@
  */
 import { useEffect, useRef } from "react";
 import { getWsBase } from "@/lib/ws";
+import { getAccessToken } from "@/lib/authSession";
 
 /** Fired on every server push. useUnreadSummary listens for this. */
 export const NOTIFICATIONS_CHANGED_EVENT = "notifications-changed";
@@ -74,7 +75,7 @@ export function useUserEventSocket(onPing?: () => void) {
 
     const connect = () => {
       if (stopped) return;
-      const token = localStorage.getItem("access");
+      const token = getAccessToken();
       // Not signed in yet — a later "user-change" remount will connect.
       if (!token) return;
 

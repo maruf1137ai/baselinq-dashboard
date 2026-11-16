@@ -38,7 +38,8 @@
  * reachable beside it; see `PaymentPositionSection`, which this tab opens
  * rather than restating.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AlertCircle, AlertTriangle, ArrowUpDown, Filter, Lock, Receipt, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Pager, pageOf } from "@/components/ui/pager";
@@ -57,8 +58,9 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FinanceStatCard } from "./FinanceStatCard";
-import PaymentPositionSection from "./PaymentPositionSection";
+import PaymentPositionSection, { type PaymentPosition } from "./PaymentPositionSection";
 import RecordPaymentDialog from "./RecordPaymentDialog";
+import useFetch from "@/hooks/useFetch";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { usePermission } from "@/hooks/usePermission";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -190,6 +192,26 @@ export default function Payments({ embedded = false }: { embedded?: boolean } = 
     canViewFinance,
   );
   const canRecord = (data as { canRecordPayment?: boolean } | undefined)?.canRecordPayment ?? holdsFinanceEdit;
+
+  /*
+    The contractor's account, and whether it can be trusted, is served only on
+    the single-certificate payload (tasks/bank_details.py::payee_accounts), not
+    on this register. Without it the dialog cannot warn that the bank details
+    changed, are not verified, or were reported NOT GENUINE. Same URL, so the
+    same cache entry, as PaymentPositionSection.
+  */
+  const recordId = recordFor?.paymentCertificateId;
+  const payee = useFetch<PaymentPosition>(
+    recordId ? `payment-certificates/${recordId}/payment/` : "",
+    { enabled: !!recordId },
+  );
+  useEffect(() => {
+    if (payee.isError) {
+      toast.error(
+        "Could not load the contractor's bank details. Check them under View position before recording a payment.",
+      );
+    }
+  }, [payee.isError]);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<PaymentRowState | "all">("all");
@@ -577,6 +599,7 @@ export default function Payments({ embedded = false }: { embedded?: boolean } = 
           outstanding={String(recordFor.outstandingAmount ?? "0")}
           serverToday={data.asAt}
           unverified={recordFor.certifiedBasis === "net_amount_unverified"}
+          payeeAccounts={payee.data?.payeeAccounts}
           onRecorded={() => refetch?.()}
         />
       )}

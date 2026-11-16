@@ -12,7 +12,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { HelpCircle } from 'lucide-react';
 import useFetch from '@/hooks/useFetch';
-import { usePatch } from '@/hooks/usePatch';
+import { BOARD_DROP_REFUSED, boardDrop } from '@/lib/boardDrop';
 import { postData } from '@/lib/Api';
 import { toast } from 'sonner';
 import CreateRequestDialog from '@/components/header/CreateRequestDialog';
@@ -75,32 +75,6 @@ const btns = [
 
 // Order: SI, VO, RFI, GI, DC. CPI omitted — frozen (no new ones, existing rows still viewable).
 const ALL_TASK_TYPES = ["SI", "VO", "RFI", "GI", "DC"];
-
-// Werner rev H — every contractual doc type uses the same generic
-// 5-stage flow on the board / Decision Timeline. DC's older bespoke
-// stages (Delay Identified → EOT Awarded) collapse into the standard
-// Draft → Sent for Review → Further Info Required → Response Provided
-// → Closed flow so the visible state is consistent across every type.
-const WERNER_STAGES = ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"];
-const taskTypeStages: Record<string, string[]> = {
-  VO: WERNER_STAGES,
-  RFI: WERNER_STAGES,
-  SI: WERNER_STAGES,
-  GI: WERNER_STAGES,
-  IC: WERNER_STAGES,
-  DC: WERNER_STAGES,
-  CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
-  CRITICALPATHITEM: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
-};
-
-// Map board column to entity status based on task type
-const getEntityStatusForColumn = (column: string, taskType: string): string => {
-  const stages = taskTypeStages[taskType] || ["Pending", "In Review", "Approved", "Closed"];
-  if (column === "todo") return stages[0];
-  if (column === "done") return stages[stages.length - 1];
-  // inReview → second stage
-  return stages.length > 2 ? stages[1] : stages[0];
-};
 
 // Document type text color mapping
 const DOC_TYPE_TEXT_COLORS: Record<string, string> = {
@@ -170,27 +144,6 @@ const getDueDateInfo = (dueDate: string | null, createdAt: string | null) => {
   return { text: 'No date', color: 'text-gray-400', isOverdue: false };
 };
 
-
-// Helper to get construction-specific status display name
-const getStatusDisplayName = (status: string | null) => {
-  if (!status) return null;
-
-  const statusLower = status.toLowerCase();
-
-  // Map backend status values to construction-friendly names
-  if (statusLower === 'todo' || statusLower === 'open' || statusLower === 'draft') {
-    return 'Open';
-  } else if (statusLower === 'in review' || statusLower === 'inreview' || statusLower === 'pending' || statusLower === 'answered' || statusLower === 'in_review') {
-    return 'Under Review';
-  } else if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'approved') {
-    return 'Resolved';
-  } else if (statusLower === 'overdue') {
-    return 'Overdue';
-  }
-
-  // Fallback: capitalize first letter
-  return status.charAt(0).toUpperCase() + status.slice(1);
-};
 
 function TaskCard({ task, isDragging, currentUserId, notifications }: any) {
   const unreadNotifications: any[] = notifications || [];
@@ -644,12 +597,10 @@ export default function Task() {
   const { data: currentUser } = useCurrentUser();
 
   // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
-  const { data: taskResponse, isLoading, refetch } = useFetch<{ count: number; results: any[]; tasks?: any[] }>(
+  const { data: taskResponse, isLoading } = useFetch<{ count: number; results: any[]; tasks?: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
-
-  const { mutateAsync: updateTask } = usePatch();
 
   const { data: effectivePerms, isLoading: permsLoading } =
     useEffectivePermissions(projectId ? parseInt(projectId) : null);
@@ -723,10 +674,7 @@ export default function Task() {
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
-  // Build the three columns from the server's tasks. Also used to put a card
-  // back after a refused or failed drag: refetch() hands back the same data,
-  // so the effect below does not re-run and the card would stay where it was
-  // dropped.
+  // Build the three columns from the server's tasks.
   const buildBoard = (resp: typeof taskResponse) => {
     const serverTasks = resp?.tasks || [];
     if (serverTasks) {
@@ -837,139 +785,47 @@ export default function Task() {
     setActiveStartContainer(findContainer(active.id));
   };
 
-  const handleDragOver = (event: any) => {
-    const { active, over } = event;
-    if (!over) return;
+  // The board never moves a card to another column while dragging. A
+  // record's status changes only through its own actions (reply, close,
+  // Approve & Sign…), which check who may take them; a column is not one.
+  const handleDragOver = (_event: any) => {};
 
-    const activeContainer = findContainer(active.id);
-    const overContainer = findContainer(over.id);
-
-    if (!activeContainer || !overContainer || activeContainer === overContainer) {
-      return;
-    }
-
-    setTasks(prev => {
-      const activeItems = (prev as any)[activeContainer];
-      const overItems = (prev as any)[overContainer];
-      const activeIndex = activeItems.findIndex((t: any) => t.id === active.id);
-      const overIndex = overItems.findIndex((t: any) => t.id === over.id);
-
-      let newIndex;
-      if (over.id in prev) {
-        newIndex = overItems.length + 1;
-      } else {
-        const isBelowOverItem =
-          over && active.rect.current.translated && active.rect.current.translated.top > over.rect.top + over.rect.height;
-        const modifier = isBelowOverItem ? 1 : 0;
-        newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
-      }
-
-      return {
-        ...prev,
-        [activeContainer]: (prev as any)[activeContainer].filter((t: any) => t.id !== active.id),
-        [overContainer]: [...(prev as any)[overContainer].slice(0, newIndex), activeItems[activeIndex], ...(prev as any)[overContainer].slice(newIndex)],
-      };
-    });
+  const endDrag = () => {
+    setActiveId(null);
+    setActiveStartContainer(null);
   };
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = (event: any) => {
     const { active, over } = event;
-    if (!over) {
-      setActiveId(null);
-      setActiveStartContainer(null);
-      return;
+    const overContainer = over ? findContainer(over.id) : null;
+    if (!over || !activeStartContainer || !overContainer) return endDrag();
+
+    const decision = boardDrop(activeStartContainer, overContainer);
+    if (decision === "refuse") {
+      // Dragging used to send a status to update-entity/ and post a
+      // "status_change" message. Now it changes nothing and says where the
+      // record's own actions are.
+      const activeTask = (tasks as any)[activeStartContainer]?.find((t: any) => t.id === active.id);
+      const code = activeTask?.task_code || "the record";
+      toast.info(BOARD_DROP_REFUSED(code), {
+        action: activeTask
+          ? { label: `Open ${code}`, onClick: () => navigate(`/tasks/${active.id}`) }
+          : undefined,
+      });
+      return endDrag();
     }
 
-    const activeContainer = findContainer(active.id);
-    const overContainer = findContainer(over.id);
-
-    // Prevent dragging out of the "done" column — locked tasks stay locked
-    if (activeStartContainer === 'done') {
-      setActiveId(null);
-      setActiveStartContainer(null);
-      return;
-    }
-
-    if (!activeContainer || !overContainer) {
-      setActiveId(null);
-      setActiveStartContainer(null);
-      return;
-    }
-
-    const activeIndex = (tasks as any)[activeContainer].findIndex((t: any) => t.id === active.id);
-    const overIndex = (tasks as any)[overContainer].findIndex((t: any) => t.id === over.id);
-
-    // If moved to a different container compared to start
-    if (activeStartContainer !== overContainer) {
-      let newStatus = 'todo';
-      if (overContainer === 'inReview') newStatus = 'in review';
-      if (overContainer === 'done') newStatus = 'done';
-
-      const activeTask = (tasks as any)[activeContainer]?.find((t: any) => t.id === active.id);
-      const entityStatus = getEntityStatusForColumn(overContainer, activeTask?.type || "");
-      const taskStatusMap: Record<string, string> = { 'todo': 'todo', 'in review': 'in review', 'done': 'done' };
-
-      // A VO's own status only moves through pricing, Recommend and Approve &
-      // Sign on its page. The board's generic stages are not VO statuses, and
-      // dragging to Done used to close an unsigned VO — so for a VO the drag
-      // moves the card only, and Done is refused.
-      const isVO = String(activeTask?.type || "").toUpperCase() === "VO";
-      if (isVO && overContainer === 'done') {
-        toast.error("A variation order is completed by Approve & Sign on its page.");
-        setTasks(buildBoard(taskResponse));
-        setActiveId(null);
-        setActiveStartContainer(null);
-        return;
-      }
-      const payload: Record<string, string> = { taskStatus: taskStatusMap[newStatus] || newStatus };
-      if (!isVO) payload.status = entityStatus;
-
-      try {
-        await Promise.all([
-          // updateTask({
-          //   url: `tasks/tasks/${active.id}/`,
-          //   data: { status: newStatus },
-          // }),
-          updateTask({
-            url: `tasks/tasks/${active.id}/update-entity/`,
-            data: payload,
-          }),
-        ]);
-        toast.success(`Task moved to ${getStatusDisplayName(newStatus) || newStatus}`);
-        await refetch();
-
-        // Auto-post status change to channel (silently fails until backend adds the endpoint)
-        const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'User';
-        postData({
-          url: `channels/by-task/${active.id}/messages/`,
-          data: {
-            content: `Status changed to ${isVO ? getStatusDisplayName(newStatus) || newStatus : entityStatus} by ${userName}`,
-            is_urgent: false,
-            message_type: 'status_change',
-          },
-        }).catch(() => { }); // silent — endpoint may not exist yet
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to update status");
-        // Put the card back where the server says it is — and stop here, so
-        // the reorder below does not move it again.
-        const fresh = await refetch();
-        setTasks(buildBoard(fresh?.data ?? taskResponse));
-        setActiveId(null);
-        setActiveStartContainer(null);
-        return;
-      }
-    }
-
-    // Reorder validation
-    if (activeIndex !== overIndex || activeContainer !== overContainer) {
+    // Same column: a local reorder only. Nothing is saved.
+    const items = (tasks as any)[overContainer];
+    const activeIndex = items.findIndex((t: any) => t.id === active.id);
+    const overIndex = items.findIndex((t: any) => t.id === over.id);
+    if (activeIndex >= 0 && overIndex >= 0 && activeIndex !== overIndex) {
       setTasks(prev => ({
         ...prev,
         [overContainer]: arrayMove((prev as any)[overContainer], activeIndex, overIndex),
       }));
     }
-
-    setActiveId(null);
-    setActiveStartContainer(null);
+    endDrag();
   };
 
   const allListFlat = [...tasks.todo, ...tasks.inReview, ...tasks.done];

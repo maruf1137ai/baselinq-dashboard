@@ -3,6 +3,10 @@ import { Eye, EyeOff, Check } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLogin } from "@/hooks/useLogin";
 import { safeNextPath } from "@/lib/invitationSignIn";
+import { clearStaleSession, formatDeadline, loginNext, saveSession } from "@/lib/twoStep";
+import TwoStepCodeStep from "@/components/auth/TwoStepCodeStep";
+import TwoStepEnrol from "@/components/auth/TwoStepEnrol";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
@@ -22,12 +26,37 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  // After a correct password: a code is needed, or set-up is (two-step sign-in).
+  const [challenge, setChallenge] = useState<{ kind: "code_required" | "setup_required"; preAuthToken: string } | null>(null);
 
   const navigate = useNavigate();
   const loginMutation = useLogin();
   // An invitation sends an existing user here to sign in, then back to it.
   const [searchParams] = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
+
+  const finishSignIn = (data: any) => {
+    saveSession(data);
+    const twoStep = data?.twoStep;
+    if (twoStep?.required && !twoStep?.enrolled && twoStep?.graceEndsAt) {
+      toast.info(
+        `Your role certifies or approves payments. Turn on two-step sign-in in Settings → Security by ${formatDeadline(twoStep.graceEndsAt)}.`,
+        { duration: 10000 },
+      );
+    }
+    if (data?.recoveryCodeUsed) {
+      toast.info(
+        `You used a recovery code. ${twoStep?.recoveryCodesLeft ?? 0} left; make new ones in Settings → Security.`,
+        { duration: 10000 },
+      );
+    }
+    navigate(nextPath ?? "/account");
+  };
+
+  const restart = () => {
+    setChallenge(null);
+    setError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,16 +66,14 @@ const LoginPage = () => {
       { email, password },
       {
         onSuccess: (data) => {
-          localStorage.setItem("access", data.tokens.access);
-          localStorage.setItem("refresh", data.tokens.refresh);
-          localStorage.setItem("user", JSON.stringify(data.user));
-          const selectedProjectId = localStorage.getItem("selectedProjectId");
-          navigate(nextPath ?? "/account");
-          // if (selectedProjectId) {
-          //   navigate("/");
-          // } else {
-          //   navigate("/account");
-          // }
+          const next = loginNext(data);
+          if (next !== "signed_in") {
+            clearStaleSession();
+            setPassword("");
+            setChallenge({ kind: next, preAuthToken: data.preAuthToken });
+            return;
+          }
+          finishSignIn(data);
         },
         onError: (err: unknown) => {
           const data = (err as any)?.response?.data;
@@ -140,6 +167,21 @@ const LoginPage = () => {
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-sm">
 
+            {challenge?.kind === "code_required" ? (
+              <TwoStepCodeStep preAuthToken={challenge.preAuthToken} onSignedIn={finishSignIn} onRestart={restart} />
+            ) : challenge?.kind === "setup_required" ? (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-normal text-[#101828] tracking-tight">Set up two-step sign-in</h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Your role certifies or approves payments, so your account needs a code from your
+                    phone as well as your password.
+                  </p>
+                </div>
+                <TwoStepEnrol preAuthToken={challenge.preAuthToken} email={email} onDone={finishSignIn} onCancel={restart} />
+              </div>
+            ) : (
+            <>
             <div className="mb-8">
               <h2 className="text-2xl font-normal text-[#101828] tracking-tight">Sign in</h2>
               <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
@@ -205,6 +247,8 @@ const LoginPage = () => {
                 {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </button>
             </form>
+            </>
+            )}
 
           </div>
         </div>

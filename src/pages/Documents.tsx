@@ -53,6 +53,8 @@ import {
 import { usePermissions } from '@/hooks/usePermissions';
 import { PageHeader } from '@/components/ui/page-header';
 import { useDocumentUnreadNotifications } from '@/hooks/useDocumentUnreadNotifications';
+import { useDocumentPages } from '@/hooks/useDocumentPages';
+import { DocumentsLoadMore } from '@/components/documents/DocumentsLoadMore';
 
 const SORT_OPTIONS = [
   { value: 'recently_updated', label: 'Recently updated' },
@@ -213,51 +215,56 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
     },
   });
 
-  // Unfiltered query — drives category counts
-  const { data: allData } = useQuery({
-    queryKey: ['documents', projectId, 'all'],
-    queryFn: () => fetchData(`documents/?project_id=${projectId}`),
-    enabled: !!projectId,
-  });
-  const allDocuments: ApiDocument[] = allData?.results ?? [];
-
-  // Build filtered URL params (search / sort / aiFlagged)
-  const filteredParams = useMemo(() => {
+  // Sort / AI-flag params shared by every list on the page.
+  const listParams = useMemo(() => {
     const p = new URLSearchParams({ project_id: projectId ?? '' });
-    if (debouncedSearch) p.set('search', debouncedSearch);
     if (sortBy !== 'recently_updated') p.set('sort', sortBy);
     if (showAiFlagged) p.set('aiStatus', 'Has Flags');
     return p.toString();
-  }, [projectId, debouncedSearch, sortBy, showAiFlagged]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['documents', projectId, 'filtered', filteredParams],
-    queryFn: () => fetchData(`documents/?${filteredParams}`),
-    enabled: !!projectId,
-  });
-  const allFilteredDocs: ApiDocument[] = data?.results ?? [];
+  }, [projectId, sortBy, showAiFlagged]);
 
   // When a search is active we drop the folder-tree layout and show a flat list.
   const isSearching = debouncedSearch.trim().length > 0;
 
-  // All three tab panels are force-mounted (so cross-tab drag targets stay
-  // registered), so each needs its own category-filtered document list.
-  const docsByCategory = useMemo(() => {
-    const groups: Record<DocCategory, ApiDocument[]> = { Contracts: [], Drawings: [], Documents: [] };
-    allFilteredDocs.forEach((d) => {
-      groups[getCategoryForDoc(d)].push(d);
-    });
-    return groups;
-  }, [allFilteredDocs]);
+  // One paged list per tab. The server pages `documents/`, and this page used
+  // to read the first response only, so its tree, tab badges and header all
+  // stopped at twenty documents. Each tab now asks for its own rows
+  // (`category=`), takes its badge from the server's `count`, and loads further
+  // pages on "Load more". All three panels are force-mounted (cross-tab drag
+  // targets stay registered), so all three lists load.
+  const contractsList = useDocumentPages<ApiDocument>(projectId, `${listParams}&category=contracts`, 'Contracts');
+  const drawingsList = useDocumentPages<ApiDocument>(projectId, `${listParams}&category=drawings`, 'Drawings');
+  const documentsList = useDocumentPages<ApiDocument>(projectId, `${listParams}&category=documents`, 'Documents');
+  const tabLists: Record<DocCategory, typeof contractsList> = {
+    Contracts: contractsList,
+    Drawings: drawingsList,
+    Documents: documentsList,
+  };
+  const searchList = useDocumentPages<ApiDocument>(
+    isSearching ? projectId : null,
+    `${listParams}&search=${encodeURIComponent(debouncedSearch.trim())}`,
+    'search',
+  );
 
-  // Category counts derived from unfiltered data
-  const categoryCounts = useMemo(() => {
-    const counts: Record<DocCategory, number> = { Drawings: 0, Documents: 0, Contracts: 0 };
-    allDocuments.forEach((d) => {
-      counts[getCategoryForDoc(d)] += 1;
-    });
-    return counts;
-  }, [allDocuments]);
+  // The tab's own filter as well as the server's: a server without
+  // `category=` returns every document to every tab, and the tree must still
+  // show each document under one tab only.
+  const docsByCategory = useMemo(
+    () => ({
+      Contracts: contractsList.rows.filter((d) => getCategoryForDoc(d) === 'Contracts'),
+      Drawings: drawingsList.rows.filter((d) => getCategoryForDoc(d) === 'Drawings'),
+      Documents: documentsList.rows.filter((d) => getCategoryForDoc(d) === 'Documents'),
+    }),
+    [contractsList.rows, drawingsList.rows, documentsList.rows],
+  );
+
+  // How many documents each tab holds — the server's count, not the rows loaded.
+  const categoryCounts: Record<DocCategory, number> = {
+    Contracts: contractsList.total,
+    Drawings: drawingsList.total,
+    Documents: documentsList.total,
+  };
+  const isLoading = isSearching ? searchList.isLoading : tabLists[activeTab].isLoading;
 
   const handleOpenDetail = (id: string | number) => {
     navigate(`/documents/${id}`);
@@ -272,7 +279,36 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
     };
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Recently updated';
-  const activeCount = docsByCategory[activeTab].length;
+  const activeCount = categoryCounts[activeTab];
+
+  /** The tab's paging footer, or its error in place of an empty-looking tree. */
+  const renderTab = (tab: DocCategory, tree: React.ReactNode) => {
+    const list = tabLists[tab];
+    if (list.isError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-12" role="alert">
+          <p className="text-sm text-destructive">Documents couldn't be loaded.</p>
+          <Button variant="outline" className="h-8 text-xs rounded-lg" onClick={list.refetch}>
+            Try again
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <>
+        {tree}
+        <DocumentsLoadMore
+          shown={list.rows.length}
+          total={list.total}
+          hasMore={list.hasMore}
+          isLoadingMore={list.isLoadingMore}
+          failed={list.loadMoreFailed}
+          onLoadMore={list.loadMore}
+          inTree
+        />
+      </>
+    );
+  };
 
   return (
     <>
@@ -289,7 +325,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
             isLoading
               ? '…'
               : isSearching
-                ? `${allFilteredDocs.length} result${allFilteredDocs.length !== 1 ? 's' : ''}`
+                ? `${searchList.total} result${searchList.total !== 1 ? 's' : ''}`
                 : `${activeCount} document${activeCount !== 1 ? 's' : ''}`
           }
           reference={
@@ -336,13 +372,32 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
         {projectId && <PrimaryContractCard projectId={projectId} />}
 
         {isSearching ? (
-          <DocumentSearchResults
-            documents={allFilteredDocs}
-            query={debouncedSearch}
-            isLoading={isLoading}
-            onDocumentClick={handleOpenDetail}
-            unreadByDocId={unreadByDocId}
-          />
+          searchList.isError ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12" role="alert">
+              <p className="text-sm text-destructive">The search couldn't be run.</p>
+              <Button variant="outline" className="h-8 text-xs rounded-lg" onClick={searchList.refetch}>
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DocumentSearchResults
+                documents={searchList.rows}
+                query={debouncedSearch}
+                isLoading={searchList.isLoading}
+                onDocumentClick={handleOpenDetail}
+                unreadByDocId={unreadByDocId}
+              />
+              <DocumentsLoadMore
+                shown={searchList.rows.length}
+                total={searchList.total}
+                hasMore={searchList.hasMore}
+                isLoadingMore={searchList.isLoadingMore}
+                failed={searchList.loadMoreFailed}
+                onLoadMore={searchList.loadMore}
+              />
+            </>
+          )
         ) : (
           <div className="flex flex-row gap-6 justify-between items-start">
             <DndContext
@@ -400,15 +455,17 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                   forceMount
                   className={cn('mt-4', activeTab !== 'Contracts' && 'hidden')}
                 >
-                  <ContractsTree
-                    projectId={projectId || ''}
-                    documents={docsByCategory.Contracts}
-                    onDocumentClick={handleOpenDetail}
-                    onViewRegister={openRegister('contracts')}
-                    onRenameDoc={setRenameDoc}
-                    onDeleteDoc={setDocToDelete}
-                    unreadByDocId={unreadByDocId}
-                  />
+                  {renderTab('Contracts', (
+                    <ContractsTree
+                      projectId={projectId || ''}
+                      documents={docsByCategory.Contracts}
+                      onDocumentClick={handleOpenDetail}
+                      onViewRegister={openRegister('contracts')}
+                      onRenameDoc={setRenameDoc}
+                      onDeleteDoc={setDocToDelete}
+                      unreadByDocId={unreadByDocId}
+                    />
+                  ))}
                 </TabsContent>
 
                 <TabsContent
@@ -416,16 +473,18 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                   forceMount
                   className={cn('mt-4', activeTab !== 'Drawings' && 'hidden')}
                 >
-                  <FoldersView
-                    projectId={projectId || ''}
-                    tab="drawings"
-                    documents={docsByCategory.Drawings}
-                    onDocumentClick={(id) => handleOpenDetail(id)}
-                    onViewRegister={openRegister('drawings')}
-                    onRenameDoc={setRenameDoc}
-                    onDeleteDoc={setDocToDelete}
-                    unreadByDocId={unreadByDocId}
-                  />
+                  {renderTab('Drawings', (
+                    <FoldersView
+                      projectId={projectId || ''}
+                      tab="drawings"
+                      documents={docsByCategory.Drawings}
+                      onDocumentClick={(id) => handleOpenDetail(id)}
+                      onViewRegister={openRegister('drawings')}
+                      onRenameDoc={setRenameDoc}
+                      onDeleteDoc={setDocToDelete}
+                      unreadByDocId={unreadByDocId}
+                    />
+                  ))}
                 </TabsContent>
 
                 <TabsContent
@@ -433,16 +492,18 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                   forceMount
                   className={cn('mt-4', activeTab !== 'Documents' && 'hidden')}
                 >
-                  <FoldersView
-                    projectId={projectId || ''}
-                    tab="documents"
-                    documents={docsByCategory.Documents}
-                    onDocumentClick={(id) => handleOpenDetail(id)}
-                    onViewRegister={openRegister('documents')}
-                    onRenameDoc={setRenameDoc}
-                    onDeleteDoc={setDocToDelete}
-                    unreadByDocId={unreadByDocId}
-                  />
+                  {renderTab('Documents', (
+                    <FoldersView
+                      projectId={projectId || ''}
+                      tab="documents"
+                      documents={docsByCategory.Documents}
+                      onDocumentClick={(id) => handleOpenDetail(id)}
+                      onViewRegister={openRegister('documents')}
+                      onRenameDoc={setRenameDoc}
+                      onDeleteDoc={setDocToDelete}
+                      unreadByDocId={unreadByDocId}
+                    />
+                  ))}
                 </TabsContent>
               </Tabs>
 

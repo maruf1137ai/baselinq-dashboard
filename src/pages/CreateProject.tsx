@@ -48,7 +48,7 @@ import { COMPANY_TYPES } from "@/lib/roleUtils";
 import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
 import { parseRetentionRate } from "@/lib/retention";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { fetchCurrentWeather, isWeatherConfigured } from "@/lib/weather";
 import {
@@ -707,8 +707,13 @@ export default function CreateProject() {
   };
 
   const { data: user } = useCurrentUser();
-  const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
-  const orgUsers: OrgUser[] = orgUsersData?.results || [];
+  // Every page: `page_size=500` was ignored by the server, so only the first
+  // twenty users of the company could be picked.
+  const { data: orgUsersData, isError: orgUsersError } = useAllPages<OrgUser>('auth/users/?my_org=true');
+  const orgUsers: OrgUser[] = orgUsersData?.rows || [];
+  useEffect(() => {
+    if (orgUsersError) toast.error("Your company's users couldn't be loaded. Reload the page to try again.");
+  }, [orgUsersError]);
   // CIDB is the role code real "Contractor" signups actually get (see
   // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];
@@ -773,6 +778,35 @@ export default function CreateProject() {
 
     }
   }, [user, clientForm.company_name]);
+
+  // 2. "Your Organisation" step: the organisation owner's company details are
+  // already on file, so start from them instead of a blank form. Owner is the
+  // organisation's own account (account_type "organisation"), the same test
+  // the backend uses before letting anyone edit the company record. Only fills
+  // while the step is still empty, so nothing the user typed is overwritten.
+  useEffect(() => {
+    if (!user || isClientOrContractor) return;
+    if (user.account_type !== "organisation" || !user.organization) return;
+    if (appointedForm.company_name) return;
+
+    const org = user.organization;
+    const profile = user.profile;
+    setAppointedForm((prev) => ({
+      ...prev,
+      company_name: org.name || prev.company_name,
+      company_registration: org.company_reg_number || prev.company_registration,
+      vat_number: org.vat_number || prev.vat_number,
+      office_number: profile?.phone_number || prev.office_number,
+      physical_address: {
+        street: profile?.address || prev.physical_address.street,
+        city: profile?.city || prev.physical_address.city,
+        province: profile?.state || prev.physical_address.province,
+        postal_code: profile?.postal_code || prev.physical_address.postal_code,
+      },
+    }));
+    // Runs once the user loads; appointedForm.company_name is the "still empty" guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 

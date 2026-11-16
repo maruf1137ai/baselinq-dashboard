@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProfile } from "@/lib/Api";
+import { clearTokens } from "@/lib/authSession";
 
 interface Organization {
   id: number;
@@ -70,8 +71,7 @@ const getCurrentUser = async (): Promise<User | null> => {
     }
   } catch (error) {
     if (!localUser) {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
+      clearTokens();
       localStorage.removeItem("userRole");
       window.location.href = "/login";
     }

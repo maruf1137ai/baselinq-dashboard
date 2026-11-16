@@ -118,7 +118,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
         <DialogHeader className="px-6 py-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
             <AiMark size={20} className="text-primary" />
-            Generate AI Meeting Notes
+            Write notes from a pasted transcript
           </DialogTitle>
         </DialogHeader>
 
@@ -172,7 +172,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
           <div className="space-y-4 px-6 pb-6 pt-4">
             {/* What AI will generate */}
             <div className="bg-muted/50 border border-border rounded-xl p-4">
-              <p className="text-sm text-foreground mb-2">AI will generate:</p>
+              <p className="text-sm text-foreground mb-2">From the transcript you paste, Linq writes:</p>
               {WILL_GENERATE.map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 bg-primary rounded-full shrink-0" />

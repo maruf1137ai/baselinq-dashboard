@@ -80,3 +80,13 @@ describe("GenerateAiNotesDialog with a background job", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 });
+
+describe("GenerateAiNotesDialog wording", () => {
+  // The dialog writes notes from text the user pastes in. Its title must say so, not promise
+  // notes the AI produces on its own (CLAUDE.md: the label must match the behaviour).
+  it("says it writes notes from a pasted transcript", () => {
+    render(<GenerateAiNotesDialog meetingId={7} open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+    expect(screen.getByRole("dialog", { name: "Write notes from a pasted transcript" })).toBeInTheDocument();
+    expect(screen.queryByText("Generate AI Meeting Notes")).not.toBeInTheDocument();
+  });
+});

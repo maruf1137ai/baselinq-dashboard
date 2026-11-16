@@ -127,6 +127,15 @@ describe("the invoice page", () => {
     expect(screen.queryByRole("heading", { name: "TAX INVOICE" })).not.toBeInTheDocument();
   });
 
+  it("says when the linked invoice does not exist", () => {
+    fetchState.data = undefined;
+    fetchState.isError = true;
+    fetchState.error = { status: 404 };
+    draw();
+    expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+    expect(screen.getByText(/may name an invoice that no longer exists/i)).toBeInTheDocument();
+  });
+
   it("does not present an outage as a settled account", () => {
     fetchState.data = undefined;
     fetchState.isError = true;

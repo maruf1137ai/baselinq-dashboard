@@ -69,6 +69,10 @@ export interface TimeBar {
    * pairs the number with a unit itself. Rendered verbatim.
    */
   days_remaining_label?: string | null;
+  /** The deadline date has passed, even with no working day since. */
+  overdue?: boolean | null;
+  /** The builders' break falls inside this clock's period. */
+  spans_shutdown?: boolean | null;
   status: string;
   /** The definition's standard description, set on creation. Not the event. */
   notes?: string;

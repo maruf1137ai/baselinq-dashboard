@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useWebPush } from "./useWebPush";
 import { NOTIFICATIONS_CHANGED_EVENT } from "./useUserEventSocket";
+import { hasSession } from "@/lib/authSession";
 
 const getProjectId = () =>
   typeof window !== "undefined"
@@ -50,8 +51,7 @@ export function useNotifications() {
   // refetches on focus through React Query's own default, so nothing is
   // lost by dropping both.
   useEffect(() => {
-    const token = localStorage.getItem("access");
-    if (!token) return;
+    if (!hasSession()) return;
     store.refresh(projectRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

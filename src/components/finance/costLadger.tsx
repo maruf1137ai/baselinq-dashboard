@@ -16,6 +16,7 @@ import { CostLedgerDrawer } from './costLedgerDrawer';
 import useFetchAllPages from '@/hooks/useFetchAllPages';
 import { AlertTriangle, PlusIcon, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
+import { downloadCostLedgerExport } from '@/lib/Api';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
 import { FinanceLoadError } from './FinanceLoadError';
 import { usePermission } from '@/hooks/usePermission';
@@ -164,15 +165,8 @@ const CostLadger = () => {
       toast.error('Select a project first');
       return;
     }
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-    const url = `${baseUrl}/cost-ledger/export/?project_id=${projectId}`;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access') : null;
     try {
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
+      const blob = await downloadCostLedgerExport(projectId);
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = 'cost_ledger.csv';

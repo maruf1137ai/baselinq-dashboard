@@ -64,7 +64,6 @@ import {
 import {
   CalendarClock, CalendarOff, FileText, HelpCircle, Paperclip, Search, Shield, ShieldAlert, ShieldQuestion,
 } from "lucide-react";
-import { AiMark } from "@/components/icons/AiMark";
 
 /**
  * The app's canonical "01 Jun 2026" format. The date is resolved to a local
@@ -312,10 +311,10 @@ const Compliance = () => {
     }
   };
 
-  // Not a claim that AI analysis runs on this page — it doesn't, there's no
-  // project-level analysis endpoint. This just points at where obligations
-  // actually come from, honestly.
-  const handleAnalyseWithAI = () => {
+  // No AI analysis runs on this page: there is no project-level analysis
+  // endpoint. Obligations come from analysing a document, so this takes the
+  // user to Documents. The button says that, not "Analyse with AI".
+  const handleFindInDocument = () => {
     toast.info("Select a document to run AI analysis and extract obligations.");
     navigate(`/documents${projectId ? `?project_id=${projectId}` : ""}`);
   };
@@ -391,9 +390,9 @@ const Compliance = () => {
               <Button
                 variant="outline"
                 className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
-                onClick={handleAnalyseWithAI}
+                onClick={handleFindInDocument}
               >
-                <AiMark className="mr-1.5" /> Analyse with AI
+                <FileText className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Find obligations in a document
               </Button>
               <Button
                 className="h-8 text-xs rounded-lg"
@@ -591,6 +590,7 @@ const Compliance = () => {
                         )}
                         {row.responsibleRole && <span>· {row.responsibleRole}</span>}
                         {row.source === "time-bar" && <span>· notice deadline</span>}
+                        {row.spansShutdown && <span>· includes builders' break</span>}
                         {raw && (
                           <span className="flex items-center gap-1">
                             · <Paperclip className="h-3 w-3" />

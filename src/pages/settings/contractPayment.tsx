@@ -12,12 +12,13 @@
  *   Progress check     PATCH projects/<id>/risk-policy/    (risk administrators)
  *   Parties            GET  projects/<id>/billing-parties/ (finance.view)
  *                      PATCH projects/<id>/  client_details / appointed_company (project.edit)
+ *   Builders' break    PATCH projects/<id>/  annual_shutdown_periods (project.edit)
  *
  * A blank field means "the contract form's default", and says what that is.
  */
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, FileText, HelpCircle, Lock } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, HelpCircle, Lock, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -33,6 +34,8 @@ import useFetch from "@/hooks/useFetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { updatePaymentTerms, updateProject, updateRiskPolicy } from "@/lib/Api";
 import { CONTRACT_FORMS } from "@/lib/contractForms";
+import { periodProblems, readShutdownPeriods, type ShutdownPeriod } from "@/lib/shutdownPeriods";
+import { formatDay } from "@/lib/timeBarEvents";
 
 interface Terms {
   contractForm: string;
@@ -370,6 +373,14 @@ export default function ContractPayment() {
         )}
       </Section>
 
+      <BuildersBreak
+        projectId={projectId}
+        projectKey={projectKey}
+        rawProject={project.data}
+        isError={project.isError && !project.data}
+        canEdit={canEditProject}
+      />
+
       <ProgressCheck projectId={projectId} policyKey={policyKey} policy={policy.data} isError={policy.isError} />
 
       <PartiesSection
@@ -472,6 +483,172 @@ function ProgressCheck({
               </SelectContent>
             </Select>
           </Field>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+const periodText = (p: ShutdownPeriod) => `${p.label} · ${formatDay(p.start)} to ${formatDay(p.end)}`;
+
+/**
+ * The contractor's annual holiday period. JBCC working days exclude it, so
+ * notice deadlines and working-day payment periods skip these dates. A project
+ * follows Baselinq's industry calendar until it records its own; saving
+ * re-counts its open notice deadlines on the server.
+ */
+function BuildersBreak({
+  projectId,
+  projectKey,
+  rawProject,
+  isError,
+  canEdit,
+}: {
+  projectId: string;
+  projectKey: string;
+  rawProject?: unknown;
+  isError: boolean;
+  canEdit: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const info = readShutdownPeriods(rawProject);
+  const [draft, setDraft] = useState<ShutdownPeriod[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const problems = draft ? periodProblems(draft) : [];
+
+  /** `null` returns the project to the platform calendar. */
+  const save = async (periods: ShutdownPeriod[] | null, done: string) => {
+    setSaving(true);
+    try {
+      // A partial PATCH: `ProjectData` types a full record, so cast the body.
+      await updateProject({ id: projectId, annual_shutdown_periods: periods } as unknown as Parameters<typeof updateProject>[0]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [projectKey] }),
+        // Open notice deadlines and working-day due dates move with the break.
+        queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/time-bars/`] }),
+        queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/payments/`] }),
+      ]);
+      toast.success(done);
+      setDraft(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The shutdown periods could not be saved");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setRow = (i: number, patch: Partial<ShutdownPeriod>) =>
+    setDraft((d) => (d ? d.map((p, j) => (j === i ? { ...p, ...patch } : p)) : d));
+
+  return (
+    <Section
+      title="Builders' break"
+      description="Notice deadlines and working-day payment periods skip the contractor's annual holiday period."
+    >
+      {isError ? (
+        <p className="text-sm text-muted-foreground">The shutdown periods could not be loaded.</p>
+      ) : !rawProject ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : !info ? (
+        <p className="text-sm text-muted-foreground">The server did not report this project's shutdown periods.</p>
+      ) : draft ? (
+        <div className="space-y-3">
+          {draft.map((p, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+              <Field id={`sd-label-${i}`} label="Label">
+                <Input id={`sd-label-${i}`} value={p.label} onChange={(e) => setRow(i, { label: e.target.value })} />
+              </Field>
+              <Field id={`sd-start-${i}`} label="First day">
+                <Input id={`sd-start-${i}`} type="date" value={p.start} onChange={(e) => setRow(i, { start: e.target.value })} />
+              </Field>
+              <Field id={`sd-end-${i}`} label="Last day">
+                <Input id={`sd-end-${i}`} type="date" value={p.end} onChange={(e) => setRow(i, { end: e.target.value })} />
+              </Field>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`Remove period ${i + 1}`}
+                onClick={() => setDraft(draft.filter((_, j) => j !== i))}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          {draft.length === 0 && (
+            <p className="text-sm text-muted-foreground">No annual shutdown: every weekday that is not a public holiday is a working day.</p>
+          )}
+          {problems.length > 0 && (
+            <ul className="text-xs text-amber-800 list-disc pl-4" role="alert">
+              {problems.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap justify-between gap-2 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDraft([...draft, { start: "", end: "", label: "Builders' break" }])}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add period
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDraft(null)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => save(draft, "Shutdown periods saved. Open notice deadlines were re-counted.")}
+                disabled={saving || problems.length > 0}
+              >
+                {saving ? "Saving…" : "Save for this project"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {info.source === "platform" ? (
+              <Badge variant="neutral">Platform default</Badge>
+            ) : (
+              <Badge variant="success">Project's own periods</Badge>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {info.source === "platform"
+                ? "Following Baselinq's industry calendar."
+                : "This project's own Contract Data."}
+            </span>
+          </div>
+          {info.effective.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No annual shutdown applies to this project.</p>
+          ) : (
+            <ul className="space-y-1 text-sm text-foreground">
+              {info.effective.map((p) => (
+                <li key={`${p.start}-${p.end}`}>{periodText(p)}</li>
+              ))}
+            </ul>
+          )}
+          {canEdit ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              {info.source === "project" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => save(null, "This project now follows the platform calendar.")}
+                >
+                  Use the platform default
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setDraft(info.effective.map((p) => ({ ...p })))}>
+                Edit for this project
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Changing the shutdown periods needs the project edit permission.</p>
+          )}
         </div>
       )}
     </Section>
