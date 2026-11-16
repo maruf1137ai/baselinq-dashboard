@@ -101,7 +101,6 @@ import { platformFeeSummary } from "@/lib/platformFee";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateProjectCommercials } from "@/hooks/useProjectCommercials";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
-import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { isTaskLocked as computeIsTaskLocked } from "@/lib/taskLock";
