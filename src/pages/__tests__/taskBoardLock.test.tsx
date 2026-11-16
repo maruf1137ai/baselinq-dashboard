@@ -6,9 +6,8 @@
  * There is no DOM snapshot, so a styling change will not break these tests,
  * but a change in what the board shows or offers will.
  *
- * Deliberately NOT covered: dragging a card between columns. On main a drag
- * can close an RFI/SI/GI/IC/DC through `update-entity/` with no permission
- * check. That is a known hole being fixed, so it must not be locked in here.
+ * Dragging is covered in taskBoardDrag.test.tsx: a drop on another column
+ * changes no status.
  *
  * If one of these fails, the board a client sees has changed. That may be
  * intended. If so, update the test in the same PR and say so in the PR body.
