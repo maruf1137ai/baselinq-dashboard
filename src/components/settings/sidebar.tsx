@@ -39,12 +39,17 @@ const navItems: {
         title: "User Management",
         url: "/settings",
         icon: <Users className="h-4 w-4 text-current" />,
+        // Its route requires viewSettings; without this a user let into
+        // Settings for Billing alone was shown it and sent to /unauthorized.
+        permission: "viewSettings",
       },
       {
         id: 10,
         title: "Associated Companies",
         url: "/settings/associated-companies",
         icon: <Building2 className="h-4 w-4 text-current" />,
+        // Same as User Management: its route requires viewSettings.
+        permission: "viewSettings",
       },
       {
         id: 2,
