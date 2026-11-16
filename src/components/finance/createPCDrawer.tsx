@@ -8,6 +8,7 @@ import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { postData, registerS3TaskAttachment } from "@/lib/Api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useDebounced } from "@/pages/account/admin/adminManage";
 import { AlertTriangle, CalendarIcon, Loader2, Minus, Plus, Trash2, X } from "lucide-react";
 import { format, parseISO, isWithinInterval } from "date-fns";
@@ -816,6 +817,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     if (!s3Upload.entries.length) return;
     const ids = s3Upload.entries.map((e) => e.id);
     const s3Keys = await s3Upload.waitForAll(ids);
+    const failed: string[] = [];
     await Promise.all(
       s3Upload.entries.map(async (entry) => {
         const key = s3Keys.get(entry.id);
@@ -826,11 +828,18 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             s3_key: key,
           });
         } catch {
-          // Certificate is already created; a failed attachment registration
-          // must not look like the certificate itself failed.
+          failed.push(entry.file.name);
         }
       })
     );
+    // The certificate is already saved, so this must not look like the save
+    // failed, and the drawer still closes. But the user is told which files
+    // are missing, so they can attach them again.
+    if (failed.length) {
+      toast.error(
+        `The certificate was saved, but ${failed.length === 1 ? "this file" : "these files"} could not be attached: ${failed.join(", ")}. Attach ${failed.length === 1 ? "it" : "them"} again by editing the certificate.`
+      );
+    }
   };
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
