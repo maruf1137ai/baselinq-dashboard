@@ -11,7 +11,6 @@ import { AnswerFeedback } from "./AnswerFeedback";
 import { LegacyPriceNotice } from "./LegacyPriceNotice";
 import { RFIAnalysisSummary } from "./RFIAnalysisSummary";
 import { CitationPill } from "./CitationPill";
-import { type AnalysisReportProps } from "./AnalysisReport";
 import { analysisSummary } from "./analysisMarkdown";
 import { shownSources, type ChatSource } from "@/types/citation";
 
@@ -33,6 +32,21 @@ interface Message {
   price_check_legacy?: boolean;
 }
 
+/** The task page's analysis request, as the chat renders it. */
+interface TaskAnalysisState {
+  isLoading: boolean;
+  /** The analysis response: { analysis, price_breakdown?, mock_used, cached, model_name, cached_at? }. */
+  analysisData: any | null;
+  taskType?: string;
+  taskId?: string;
+  /** What the background job is doing now (e.g. "analysing"). */
+  stage?: string | null;
+  /** A readable failure from the backend; shown instead of a result. */
+  error?: string | null;
+  /** Run the analysis again (force refresh). */
+  onRerun?: () => void;
+}
+
 interface AIChatInterfaceProps {
   taskType: string;
   data: any;
@@ -41,7 +55,7 @@ interface AIChatInterfaceProps {
    * welcome message. The task page owns the request and the job polling, so the chat only renders
    * what it is given. Absent means the analysis was never started for this task.
    */
-  analysis?: AnalysisReportProps & { show?: boolean };
+  analysis?: TaskAnalysisState & { show?: boolean };
 }
 
 export function AIChatInterface({ taskType, data, analysis }: AIChatInterfaceProps) {
