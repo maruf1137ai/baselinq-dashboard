@@ -505,8 +505,8 @@ export default function RolesPermissions() {
     } catch (e: any) {
       // The server has guards this page cannot fully predict — the lockout
       // rule, unknown codes, granting to your own role. Show what it said
-      // rather than a generic failure. putData rethrows the server's message
-      // as a plain Error (no .response), so read .message too.
+      // rather than a generic failure. The server may send `error` rather
+      // than `detail`; putData's Error carries either as .message, so read both.
       toast.error("Could not save", {
         description:
           e?.response?.data?.detail ?? e?.message ?? "The server rejected the change. Nothing was saved.",

@@ -85,7 +85,7 @@ const handleError = (error) => {
   // Surface the backend-provided message (e.g. DRF `error`/`detail`) so toasts
   // show the real reason instead of a bare "HTTP error! status: NNN". Only use a
   // string — DRF validation errors can be objects/arrays, which fall back to the
-  // status. Still throws an Error (no `.response`), preserving the prior contract.
+  // status. Still throws a plain Error, now with the axios `.response` attached.
   const data = error.response?.data;
   const backendMessage = [data?.error, data?.detail, data?.message].find(
     (m) => typeof m === "string" && m.trim().length > 0,
@@ -102,6 +102,17 @@ const handleError = (error) => {
   if (error.response) {
     err.status = error.response.status;
     if (typeof data?.code === "string") err.code = data.code;
+    // Callers are written against axios and read `err.response.data`: the
+    // refusal reason, field errors, the certificate integrity verdict. Without
+    // this they all got undefined and showed a generic failure instead.
+    // Non-enumerable so logging or serialising the error does not carry the
+    // whole response (config, request) with it.
+    Object.defineProperty(err, "response", {
+      value: error.response,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
   }
   throw err;
 };
