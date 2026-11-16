@@ -11,6 +11,7 @@ import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Clip from '@/components/icons/Clip';
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '@/lib/Api';
+import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from '@/hooks/useAIJob';
 import { AIMarkdown } from '@/components/AIAnalysis/AIMarkdown';
 import { AnswerFeedback } from '@/components/AIAnalysis/AnswerFeedback';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
@@ -62,6 +63,9 @@ const AiWorkSpace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   const [pendingAttachment, setPendingAttachment] = useState<{ file_name: string; attachment_id: number } | null>(null);
   const [attachmentLoading, setAttachmentLoading] = useState(false);
+  // W1-b: replies and attachments are background jobs; their stage is shown while they run.
+  const [job, setJob] = useState<AIJob | null>(null);
+  const [attachJob, setAttachJob] = useState<AIJob | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   // Part 8c: a task chat that couldn't start says why, with a retry (no invented greeting).
   const [initError, setInitError] = useState<string | null>(null);
@@ -108,6 +112,7 @@ const AiWorkSpace = () => {
     // Part 15: a reply for a chat the user has already left (a quick switch, or React's double run in
     // development) is ignored — it used to overwrite the chat now on screen.
     let cancelled = false;
+    const controller = new AbortController();
 
     const load = async () => {
       setInitError(null);
@@ -136,10 +141,10 @@ const AiWorkSpace = () => {
           setMessages(formatMsgs(response.messages));
         } else {
           try {
-            const initResponse = await postData({
+            const initResponse = await resolveAIJob(await postData({
               url: chatUrl,
-              data: { action: 'init' },
-            });
+              data: { action: 'init', ...ASYNC_AI },
+            }), { onUpdate: (j) => !cancelled && setJob(j), signal: controller.signal });
             if (cancelled) return;
             if (initResponse?.sessionId) setActiveSessionId(initResponse.sessionId);
             if (initResponse?.messages && initResponse.messages.length > 0) {
@@ -159,13 +164,17 @@ const AiWorkSpace = () => {
           setInitError(readableChatError(err));
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setJob(null);
+        }
       }
     };
 
     load();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [chatUrl, sessionId, reloadKey]);
 
@@ -197,15 +206,15 @@ const AiWorkSpace = () => {
     if (chatUrl) {
       // Real API call
       try {
-        const body: any = { message: userMessage.content };
+        const body: any = { message: userMessage.content, ...ASYNC_AI };
         const effectiveSessionId = sessionId || (activeSessionId ? String(activeSessionId) : null);
         if (isProjectMode && effectiveSessionId) {
           body.session_id = parseInt(effectiveSessionId);
         }
-        const response = await postData({
+        const response = await resolveAIJob(await postData({
           url: chatUrl,
           data: body,
-        });
+        }), { onUpdate: setJob });
         if (response?.sessionId && isTaskMode) setActiveSessionId(response.sessionId);
         const aiMessage: Message = {
           id: response.messageId ? String(response.messageId) : (Date.now() + 1).toString(),
@@ -238,6 +247,7 @@ const AiWorkSpace = () => {
         toast.error(backendMessage || 'Failed to get AI response. Please try again.');
       } finally {
         setIsTyping(false);
+        setJob(null);
       }
     }
   };
@@ -253,7 +263,8 @@ const AiWorkSpace = () => {
 
       // No session yet — create one via init (works for both project and task chats)
       if (!resolvedSessionId) {
-        const initResp = await postData({ url: chatUrl, data: { action: 'init' } });
+        const initResp = await resolveAIJob(await postData({ url: chatUrl, data: { action: 'init', ...ASYNC_AI } }),
+          { onUpdate: setAttachJob });
         resolvedSessionId = initResp?.sessionId ?? null;
         if (resolvedSessionId) setActiveSessionId(resolvedSessionId);
       }
@@ -271,10 +282,10 @@ const AiWorkSpace = () => {
 
       await uploadFileToPresignedUrl(upload_url, file, file.type || 'application/octet-stream');
 
-      const attachResp = await postData({
+      const attachResp = await resolveAIJob(await postData({
         url: `ai_analysis/session/${resolvedSessionId}/attach/`,
-        data: { s3_key: key, file_name: file.name, file_type: file.type || 'application/octet-stream' },
-      });
+        data: { s3_key: key, file_name: file.name, file_type: file.type || 'application/octet-stream', ...ASYNC_AI },
+      }), { onUpdate: setAttachJob });
 
       setPendingAttachment({ file_name: file.name, attachment_id: attachResp.attachment_id });
       toast.success(`"${file.name}" attached and analyzed.`);
@@ -283,6 +294,7 @@ const AiWorkSpace = () => {
       toast.error(err?.response?.data?.error || 'Failed to attach file. Please try again.');
     } finally {
       setAttachmentLoading(false);
+      setAttachJob(null);
     }
   };
 
@@ -312,7 +324,7 @@ const AiWorkSpace = () => {
       className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
       onClick={() => fileInputRef.current?.click()}
       disabled={attachmentLoading}
-      title="Attach file"
+      title={attachmentLoading && attachJob ? jobStatusLabel(attachJob) : "Attach file"}
       aria-label="Attach a file"
     >
       {attachmentLoading ? (
@@ -321,6 +333,10 @@ const AiWorkSpace = () => {
         <Clip />
       )}
     </Button>
+  );
+
+  const attachmentStatus = attachmentLoading && attachJob && (
+    <span role="status" className="px-2 py-1 text-xs text-muted-foreground">{jobStatusLabel(attachJob)}</span>
   );
 
   const attachmentChip = pendingAttachment && (
@@ -358,7 +374,7 @@ const AiWorkSpace = () => {
                   {/* Part 15: screen readers hear each new answer */}
                   {isLoading && messages.length === 0 && (
                     <div className="flex items-center justify-center py-20">
-                      <AwesomeLoader message="Analyzing context" />
+                      <AwesomeLoader message={job ? jobStatusLabel(job) : "Analyzing context"} />
                     </div>
                   )}
                   {initError && (
@@ -430,7 +446,7 @@ const AiWorkSpace = () => {
                   ))}
                   {isTyping && (
                     <div className="mb-6">
-                      <AwesomeLoader compact message="Analyzing context" />
+                      <AwesomeLoader compact message={job ? jobStatusLabel(job) : "Analyzing context"} />
                     </div>
                   )}
                   <div ref={messagesEndRef} />
@@ -440,8 +456,8 @@ const AiWorkSpace = () => {
               {/* Input Area */}
               <div className="px-3 sm:px-6 py-4">
                 <div className="mx-auto max-w-4xl">
-                  {attachmentChip && (
-                    <div className="flex flex-wrap gap-1.5 mb-2 px-1">{attachmentChip}</div>
+                  {(attachmentChip || attachmentStatus) && (
+                    <div className="flex flex-wrap gap-1.5 mb-2 px-1">{attachmentChip}{attachmentStatus}</div>
                   )}
                   <div className="relative flex items-end gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
                     {clipButton}
@@ -494,8 +510,8 @@ const AiWorkSpace = () => {
 
                   {/* Input with bottom toolbar */}
                   <div className="rounded-xl bg-card border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#6c5ce7]/30 focus-within:border-[#6c5ce7] transition-all">
-                    {attachmentChip && (
-                      <div className="flex flex-wrap gap-1.5 px-4 pt-3">{attachmentChip}</div>
+                    {(attachmentChip || attachmentStatus) && (
+                      <div className="flex flex-wrap gap-1.5 px-4 pt-3">{attachmentChip}{attachmentStatus}</div>
                     )}
                     <Textarea
                       ref={textareaRef}

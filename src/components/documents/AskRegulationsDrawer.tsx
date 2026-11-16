@@ -30,6 +30,7 @@ import { formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData } from '@/lib/Api';
+import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from '@/hooks/useAIJob';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
@@ -98,6 +99,8 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  // W1-b: the answer is a background job; its stage is shown while it runs.
+  const [job, setJob] = useState<AIJob | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -172,7 +175,8 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
 
   // Send message mutation
   const { mutate: sendMessage, isPending: isSending } = useMutation({
-    mutationFn: (message: string) => postData({ url: sendUrl, data: { message, ...scope() } }),
+    mutationFn: async (message: string) =>
+      resolveAIJob(await postData({ url: sendUrl, data: { message, ...scope(), ...ASYNC_AI } }), { onUpdate: setJob }),
     onSuccess: (response) => {
       setMessages(prev => [...prev, toAssistant(response)]);
       refreshHistory();
@@ -181,12 +185,15 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
       const backendMessage = err?.response?.data?.message;
       toast.error(backendMessage || 'Failed to get AI response.');
     },
+    onSettled: () => setJob(null),
   });
 
   // Part 15: "Regenerate" answers the latest question again and REPLACES that answer — it used to send the
   // question once more, adding a duplicate question and a second answer.
   const { mutate: regenerate, isPending: isRegenerating } = useMutation({
-    mutationFn: () => postData({ url: sendUrl, data: { regenerate: true, ...scope() } }),
+    mutationFn: async () =>
+      resolveAIJob(await postData({ url: sendUrl, data: { regenerate: true, ...scope(), ...ASYNC_AI } }),
+        { onUpdate: setJob }),
     onSuccess: (response) => {
       setMessages(prev => {
         const lastAssistant = [...prev].reverse().findIndex(m => m.role === 'assistant');
@@ -200,7 +207,10 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
       const data = err?.response?.data || {};
       toast.error(data.message || data.error || "Couldn't regenerate the answer.");
     },
-    onSettled: () => setRegeneratingId(null),
+    onSettled: () => {
+      setRegeneratingId(null);
+      setJob(null);
+    },
   });
   const lastAssistantId = [...messages].reverse().find(m => m.role === 'assistant')?.id;
 
@@ -356,6 +366,9 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                             <RefreshCw className={`h-3.5 w-3.5 text-gray-400 ${regeneratingId === msg.id ? 'animate-spin' : ''}`} />
                           </button>
                         )}
+                        {regeneratingId === msg.id && job && (
+                          <span role="status" className="text-xs text-gray-500">{jobStatusLabel(job)}</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -438,10 +451,11 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
               {isSending && (
                 <div className="flex flex-col gap-3 items-start">
                   <div className="bg-card border border-border rounded-3xl rounded-tl-none p-6 shadow-sm">
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 items-center">
                       <div className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
                       <div className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
                       <div className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce" />
+                      {job && <span role="status" className="ml-2 text-xs text-gray-500">{jobStatusLabel(job)}</span>}
                     </div>
                   </div>
                 </div>

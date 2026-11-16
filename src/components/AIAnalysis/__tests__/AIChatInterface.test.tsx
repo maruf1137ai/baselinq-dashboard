@@ -4,7 +4,7 @@
  * heading block of its own — so it is readable wherever the chat is, and a chat that failed to
  * start cannot hide an analysis that succeeded.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -143,5 +143,56 @@ describe("the analysis as a chat message", () => {
     const button = await screen.findByRole("button", { name: "Re-run analysis" });
     button.click();
     expect(onRerun).toHaveBeenCalled();
+  });
+});
+
+describe("a reply that runs as a background job (W1-b)", () => {
+  it("asks for a job, says Working… while it runs, then shows the reply", async () => {
+    api.fetchData.mockImplementation(async (url: string) => (url.startsWith("ai_analysis/jobs/")
+      ? { id: "j1", kind: "ai_request", status: "succeeded", stage: "done", progress: 100, error_code: "",
+          message: "", result: { messageId: 9, reply: "Clause 17.1 lets the architect vary the works.", sources: [] },
+          created_at: null, finished_at: null }
+      : welcome()));
+    api.postData.mockResolvedValue({
+      status: "queued", job_id: "j1",
+      job: { id: "j1", kind: "ai_request", status: "running", stage: "writing the answer", progress: 20,
+             error_code: "", message: "", result: null, created_at: null, finished_at: null },
+    });
+    open(undefined);
+    await screen.findByText("I've reviewed SI-052 against your contract.");
+
+    fireEvent.change(screen.getByPlaceholderText(/Examine compliance/), { target: { value: "Who can vary the works?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("Working… writing the answer")).toBeInTheDocument();
+    expect(api.postData).toHaveBeenCalledWith({
+      url: "ai_analysis/si/7/chat/", data: { message: "Who can vary the works?", async: true },
+    });
+    expect(await screen.findByText("Clause 17.1 lets the architect vary the works.", {}, { timeout: 5000 }))
+      .toBeInTheDocument();
+    expect(screen.queryByText(/Working…/)).not.toBeInTheDocument();
+  });
+
+  it("shows the job's readable failure", async () => {
+    const { toast } = await import("sonner");
+    api.fetchData.mockImplementation(async (url: string) => (url.startsWith("ai_analysis/jobs/")
+      ? { id: "j2", kind: "ai_request", status: "failed", stage: "", progress: 0, error_code: "ai_timeout",
+          message: "The AI took too long to respond. Please try again.", result: null, created_at: null,
+          finished_at: null }
+      : welcome()));
+    api.postData.mockResolvedValue({
+      status: "queued", job_id: "j2",
+      job: { id: "j2", kind: "ai_request", status: "queued", stage: "", progress: 0, error_code: "", message: "",
+             result: null, created_at: null, finished_at: null },
+    });
+    open(undefined);
+    await screen.findByText("I've reviewed SI-052 against your contract.");
+
+    fireEvent.change(screen.getByPlaceholderText(/Examine compliance/), { target: { value: "Any delays?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("The AI took too long to respond. Please try again.", {}, { timeout: 5000 }))
+      .toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("The AI took too long to respond. Please try again.");
   });
 });

@@ -4,6 +4,7 @@ import { AiMark } from "@/components/icons/AiMark";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
+import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from "@/hooks/useAIJob";
 import { toast } from "sonner";
 import { AIMarkdown } from "./AIMarkdown";
 import { AnswerFeedback } from "./AnswerFeedback";
@@ -60,6 +61,8 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
   const [historyLoaded, setHistoryLoaded] = useState(false);
   // Part 8c: a chat that couldn't start says why (no invented "I've analysed the documentation" greeting).
   const [initError, setInitError] = useState<string | null>(null);
+  // W1-b: the reply is a background job; its stage is shown while Linq works on it.
+  const [job, setJob] = useState<AIJob | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const taskTypeId = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
@@ -89,10 +92,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           setHistoryLoaded(true);
           setIsInitializing(true);
           try {
-            const initResponse = await postData({
+            const initResponse = await resolveAIJob(await postData({
               url: chatUrl,
-              data: { action: "init" },
-            });
+              data: { action: "init", ...ASYNC_AI },
+            }), { onUpdate: setJob });
             if (initResponse?.messages && initResponse.messages.length > 0) {
               const loaded: Message[] = initResponse.messages.map((m: any) => ({
                 serverId: typeof m.id === 'number' ? m.id : undefined,
@@ -111,6 +114,7 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
               || "Linq couldn't start this chat. Please try again.");
           } finally {
             setIsInitializing(false);
+            setJob(null);
           }
         }
       } catch (err) {
@@ -154,10 +158,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
     setError(null);
 
     try {
-      const response = await postData({
+      const response = await resolveAIJob(await postData({
         url: chatUrl,
-        data: { message: text }
-      });
+        data: { message: text, ...ASYNC_AI }
+      }), { onUpdate: setJob });
 
       const assistantMessage: Message = {
         serverId: typeof response.messageId === 'number' ? response.messageId : undefined,
@@ -178,6 +182,7 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
       // Or just leave it and show error.
     } finally {
       setIsTyping(false);
+      setJob(null);
     }
   };
 
@@ -299,12 +304,13 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           //     </p>
           //   </div>
           // </div>
-          <div className="flex items-center justify-center min-h-[300px]">
+          <div className="flex flex-col items-center justify-center gap-3 min-h-[300px]">
             <div className="ai-orb-loader">
               <div className="ai-orb-wave" />
               <div className="ai-orb-wave" />
               <div className="ai-orb-wave" />
             </div>
+            {job && <span role="status" className="text-xs text-primary/60 font-medium">{jobStatusLabel(job)}</span>}
           </div>
         )}
 
@@ -333,7 +339,9 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
                 <div className="ai-orb-wave" />
                 <div className="ai-orb-wave" />
               </div>
-              <span className="text-xs text-primary/60 font-medium animate-pulse">Analyzing context...</span>
+              <span role="status" className="text-xs text-primary/60 font-medium animate-pulse">
+                {isTyping && job ? jobStatusLabel(job) : "Analyzing context..."}
+              </span>
             </div>
           </div>
         )}
