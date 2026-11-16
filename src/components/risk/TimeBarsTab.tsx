@@ -188,6 +188,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
             <p className="text-xs text-muted-foreground mt-1">
               {bar.duration} {bar.unit} days from confirmed awareness on{" "}
               {formatDay(bar.awareness_date)} → due <strong>{formatDay(bar.deadline_date)}</strong>
+              {bar.spans_shutdown && <> · includes builders' break</>}
               {bar.forfeits === false && <> · No forfeiture of its own on this step</>}
             </p>
           </div>

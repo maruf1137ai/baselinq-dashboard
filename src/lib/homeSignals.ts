@@ -754,6 +754,8 @@ export interface TimeBarLike {
    * `days_remaining_unit` (`risk/views_evidence.py`).
    */
   days_remaining_label?: string | null;
+  /** The deadline date has passed, even with no working day since (a weekend). */
+  overdue?: boolean | null;
   /**
    * The unit of the NOTICE PERIOD — "working" or "calendar". A JBCC clock is a
    * 20-working-day period, so this reads "working", and `deadline_date` is
@@ -1085,7 +1087,7 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
     // The deadline date, raw. It used to be formatted and glued to the front
     // of the headline; the row draws it as a date object now.
     date: r.bar.deadline_date ?? null,
-    overdue: r.days !== null && r.days < 0,
+    overdue: r.bar.overdue === true || (r.days !== null && r.days < 0),
     href: ROUTE.timeBars,
     action: "Open the deadline",
     requires: ["risk.timebar.manage"] as QueueRequirement[],

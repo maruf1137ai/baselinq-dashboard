@@ -591,6 +591,7 @@ const Compliance = () => {
                         )}
                         {row.responsibleRole && <span>· {row.responsibleRole}</span>}
                         {row.source === "time-bar" && <span>· notice deadline</span>}
+                        {row.spansShutdown && <span>· includes builders' break</span>}
                         {raw && (
                           <span className="flex items-center gap-1">
                             · <Paperclip className="h-3 w-3" />

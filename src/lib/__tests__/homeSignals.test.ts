@@ -232,6 +232,13 @@ describe("buildTimeBarQueue", () => {
     expect(q[0].overdue).toBe(false);
   });
 
+  it("marks the weekend after a deadline overdue, though 0 working days have passed", () => {
+    const [row] = buildTimeBarQueue([
+      { id: 2, label: "Notice of delay", days_remaining: 0, overdue: true, unit: "working", status: "open" },
+    ]);
+    expect(row.overdue).toBe(true);
+  });
+
   // ── The countdown-unit bug, and its correction ───────────────────────────
   //
   // `days_remaining` USED to be `(deadline_date - localdate()).days` — plain
