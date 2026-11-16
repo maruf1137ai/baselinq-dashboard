@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom";
 import type { PCEntry } from "./paymentCertificateTable";
 import useFetch from "@/hooks/useFetch";
+import useFetchAllPages from "@/hooks/useFetchAllPages";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useS3Upload } from "@/hooks/useS3Upload";
@@ -522,8 +523,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * The certificate being edited is left out, as the server leaves it out
    * (`vo_certified_elsewhere(exclude_pc_id=…)`): its own lines are what is
    * being changed, not something certified elsewhere.
+   *
+   * Every page, not the first. The list is paged at twenty, so on a project
+   * with more certificates a variation certified on the 21st read as never
+   * certified and opened ticked at its whole approved value.
    */
-  const { data: priorPCResponse } = useFetch<{ results: any[] }>(
+  const { data: priorPCResponse, isError: priorPCError } = useFetchAllPages<any>(
     isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
     { enabled: !!(isOpen && projectId) }
   );
@@ -1712,6 +1717,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             {/* ── 3. Approved Variation Orders ─────────────────────────────────── */}
             <section>
               <SectionHeader>Approved Variation Orders</SectionHeader>
+              {priorPCError && (
+                <p role="alert" className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Earlier certificates could not be loaded, so Prev. Certified may read too low.
+                  The server still checks each variation when you save.
+                </p>
+              )}
               {signedSinceDraft.length > 0 && (
                 <p role="note" className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
                   Approved since this draft was saved, and added at their uncertified balance:{" "}
