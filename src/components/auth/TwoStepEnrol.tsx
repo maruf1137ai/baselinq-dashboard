@@ -1,11 +1,11 @@
 /**
- * Setting up two-step sign-in: the authenticator link and key, a code to
+ * Setting up two-step sign-in: the authenticator QR code and key, a code to
  * confirm, then the 10 recovery codes, shown once.
  *
  * Used from Settings → Security (signed in) and from the sign-in page when a
  * certifying role's grace period is over (with the pre-auth token).
  */
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Copy, Download, Loader2, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { confirmTwoStepSetup, startTwoStepSetup } from "@/lib/Api";
 import { cleanCode, formatSecret, recoveryCodesFile, twoStepErrorMessage } from "@/lib/twoStep";
+
+const TwoStepQr = lazy(() => import("./TwoStepQr"));
 
 interface Props {
   preAuthToken?: string;
@@ -83,6 +85,15 @@ export default function TwoStepEnrol({ preAuthToken, email, onDone, onCancel }: 
     }
   };
 
+  const copySecret = async () => {
+    try {
+      await navigator.clipboard.writeText(setup?.secret ?? "");
+      toast.success("Setup key copied.");
+    } catch {
+      toast.error("Couldn't copy. Select the key and copy it by hand.");
+    }
+  };
+
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (code.length !== 6) {
@@ -146,15 +157,31 @@ export default function TwoStepEnrol({ preAuthToken, email, onDone, onCancel }: 
       {errorBox}
       <ol className="space-y-3 text-sm text-foreground list-decimal pl-5">
         <li>
-          On this phone,{" "}
-          <a href={setup.otpauthUri} className="text-[#6c5ce7] hover:underline inline-flex items-center gap-1">
-            <Smartphone className="h-3.5 w-3.5" /> open your authenticator app
-          </a>
-          . On a computer, add an account in the app and enter this key:
-          <div className="mt-2 rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm tracking-wider select-all" data-testid="two-step-secret">
-            {formatSecret(setup.secret)}
+          Scan this QR code with your authenticator app, or enter the key by hand.
+          <div className="mt-2 mb-3 block w-fit rounded-lg border border-border bg-white p-1" data-testid="two-step-qr">
+            <Suspense fallback={<div className="h-[176px] w-[176px]" />}>
+              <TwoStepQr value={setup.otpauthUri} />
+            </Suspense>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Account: {email || "your Baselinq email"}. Type: time-based.</p>
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm tracking-wider select-all" data-testid="two-step-secret">
+              {formatSecret(setup.secret)}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={copySecret}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy key
+            </Button>
+          </div>
+          <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+            <li>Account: {email || "your Baselinq email"}</li>
+            <li>Issuer: Baselinq</li>
+            <li>Type: time-based, 6 digits</li>
+          </ul>
+          <a
+            href={setup.otpauthUri}
+            className="mt-2 text-[#6c5ce7] hover:underline inline-flex items-center gap-1 md:hidden"
+          >
+            <Smartphone className="h-3.5 w-3.5" /> Open in authenticator app
+          </a>
         </li>
         <li>
           Enter the 6-digit code the app shows.

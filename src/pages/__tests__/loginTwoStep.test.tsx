@@ -111,7 +111,7 @@ describe("sign-in with two-step", () => {
 
   it("sets up two-step sign-in when the role requires it, then signs in", async () => {
     api.loginUser.mockResolvedValue({ twoStep: "setup_required", preAuthToken: "enrol" });
-    api.startTwoStepSetup.mockResolvedValue({ secret: "ABCDEFGHIJKLMNOP", otpauthUri: "otpauth://totp/x" });
+    api.startTwoStepSetup.mockResolvedValue({ secret: "ABCDEFGHIJKLMNOP", otpauthUri: "otpauth://totp/Baselinq%3Apa%40example.com?secret=ABCDEFGHIJKLMNOP&issuer=Baselinq&algorithm=SHA1&digits=6&period=30" });
     api.confirmTwoStepSetup.mockResolvedValue({ ...SIGNED_IN, recoveryCodes: ["aaaaa-bbbbb", "ccccc-ddddd"] });
     renderLogin();
     signIn();
