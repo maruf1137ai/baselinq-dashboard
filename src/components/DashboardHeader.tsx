@@ -23,6 +23,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 import { useLogout } from "@/hooks/useLogout";
 import { useMeetingRsvp } from "@/hooks/useMeetingRsvp";
+import { DeclineReasonForm } from "@/components/meetings/DeclineMeeting";
+import { apiErrorMessage } from "@/lib/apiErrorMessage";
 import useFetch from "@/hooks/useFetch";
 import { toast } from "sonner";
 
@@ -42,15 +44,25 @@ function splitNotificationTitle(title: string): { projectLabel: string | null; m
 
 function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
   const { mutate, isPending } = useMeetingRsvp(meetingId);
+  // The bell is a popover: a dialog opened from here would close with it, so
+  // the reason is asked for inline, inside this notification.
+  const [declining, setDeclining] = useState(false);
+  if (declining) {
+    return (
+      <div className="mt-2">
+        <DeclineReasonForm meetingId={meetingId} compact onCancel={() => setDeclining(false)} />
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-2 mt-2">
       <button
         disabled={isPending}
         onClick={(e) => {
           e.stopPropagation();
-          mutate("accepted", {
+          mutate({ status: "accepted" }, {
             onSuccess: () => toast.success("Meeting accepted"),
-            onError: () => toast.error("Failed to update RSVP"),
+            onError: (err) => toast.error(apiErrorMessage(err, "Failed to update RSVP")),
           });
         }}
         className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
@@ -61,10 +73,7 @@ function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
         disabled={isPending}
         onClick={(e) => {
           e.stopPropagation();
-          mutate("declined", {
-            onSuccess: () => toast.success("Meeting declined"),
-            onError: () => toast.error("Failed to update RSVP"),
-          });
+          setDeclining(true);
         }}
         className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
       >
@@ -122,12 +131,16 @@ function NotificationItem({
             <p className="text-[11px] text-muted-foreground/70 mt-1.5">
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
             </p>
-            {showRsvp && (
-              <MeetingRsvpButtons meetingId={meetingId!} />
-            )}
           </div>
         </div>
       </button>
+      {/* Outside the item's button: buttons and a text box can't live inside
+          a <button> (the reason box couldn't take focus in some browsers). */}
+      {showRsvp && (
+        <div className={`pb-4 pr-4 -mt-2 ${!item.isRead ? "pl-9" : "pl-4"}`}>
+          <MeetingRsvpButtons meetingId={meetingId!} />
+        </div>
+      )}
       <button
         type="button"
         aria-label="Delete notification"

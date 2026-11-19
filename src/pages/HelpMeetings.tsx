@@ -82,20 +82,20 @@ const SECTIONS: MeetingSection[] = [
     type: "ATTENDEES",
     title: "Attendees",
     description:
-      "Who gets invited, and what they can do about it. Attendees are picked once, when the meeting is created.",
+      "Who gets invited, and what they can do about it.",
     rows: [
       {
-        action: "Add attendees",
-        who: "Whoever is creating the meeting, choosing from the project's team members.",
-        when: "Only at creation time.",
+        action: "Add or remove attendees",
+        who: "The meeting's organiser (the user who created it), choosing from the users on the project.",
+        when: "When scheduling, and afterwards from \"Add attendee\" in the Attendees panel on the meeting's page, until the meeting is live, completed or cancelled.",
         note:
-          "The creator is automatically added and can't be removed. There is no button anywhere to add or remove attendees after the meeting is created — the meetings list shows who's attending, and the meeting's own detail page shows who's attending too, but neither one lets you change it.",
+          "The organiser is added automatically and can't be removed. A newly added attendee gets an invite notification. The Attendees panel shows everyone invited with their answer — Accepted, Pending or Declined — and every attendee can see it.",
       },
       {
         action: "Accept or decline an invite (RSVP)",
         who: "Only the invited person, for their own invite.",
         when: "Anytime before or during the meeting.",
-        note: "This is the one attendee action that's properly scoped to \"you\" — you can never RSVP on someone else's behalf.",
+        note: "You can only answer your own invite. Declining asks for a reason: the organiser gets a notification with it, and everyone on the meeting sees it next to your name in the Attendees panel. Accepting later clears it. The organiser has no invite to answer, and a cancelled or finished meeting takes no replies.",
       },
     ],
   },
@@ -106,12 +106,19 @@ const SECTIONS: MeetingSection[] = [
       "Changing meeting details, cancelling, or marking a meeting completed / no-show once it's passed.",
     rows: [
       {
+        action: "Edit a meeting's details (title, date, time, link, priority)",
+        who: "Only the meeting's organiser.",
+        when: "Until the meeting is live, completed or cancelled.",
+        note:
+          "Use Edit in the Meeting details panel. The server enforces this: nobody else can change the details, whatever their role. Changing the date or time sets everyone's answer back to Pending and notifies the attendees.",
+      },
+      {
         action: "Cancel a meeting, or mark it Completed / No Show",
         who:
           "These buttons are shown to the same roles as scheduling: Client/Owner, Client Project Manager, Project Manager, Construction Manager, Contracts Manager, Consultant Quantity Surveyor, Architect.",
         when: "Anytime the meeting exists (cancel), or once it's in the past (mark outcome).",
         note:
-          "Also UI-only, and also just a default — same caveats as scheduling above. The server actually allows the meeting's creator, or any invited attendee, to cancel or update it — not just the roles above. There's no separate \"edit meeting details\" screen; only status changes and cancellation exist as actions after creation.",
+          "The organiser can always do this for their own meeting. Anyone else needs the \"update meetings\" permission for the project, and the server checks it. That permission covers the meeting's status only — it doesn't let anyone else change the details or the attendees.",
       },
       {
         action: "See a meeting at all (it shows up in your list)",
@@ -164,6 +171,7 @@ const SECTIONS: MeetingSection[] = [
 const GLOBAL_NOTES = [
   "Unlike Tasks, Finance, and Programme, most of the role restrictions on this page are enforced only by the interface, not by the server. For scheduling, updating, cancelling, and attendee changes, the real rule the backend applies is: you created the meeting, or you're one of its attendees — your project role doesn't change what you're allowed to do beyond that. The one exception is approving AI action items, which does check your actual role.",
   "A meeting's status is one of: Scheduled, Live, Completed, Cancelled, or No Show. There's no \"Held\" status — if you see that term used elsewhere, it doesn't match what the system actually tracks.",
+  "Once a meeting's time has passed it leaves Upcoming. A meeting with a video link that the recording bot never joined shows as No Show. A meeting without a link shows as \"Awaiting outcome\" under the Past tab, because nothing could observe whether it happened — someone who can update meetings records it as Completed, Cancelled or No Show.",
   "AI processing progress (none → processing → transcribed → notes ready, or failed with the reason and a Retry) is tracked separately from the meeting's own status, so a meeting can show as \"Completed\" while its notes are still being generated in the background.",
   "The role lists for Scheduling and Updating/Cancelling are organisation-wide defaults, not guarantees. A project admin can grant or revoke either one for a specific role on a specific project via Settings → Permissions, and an organisation admin always sees both buttons regardless of their role on the project.",
 ];

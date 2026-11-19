@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 
-export type LifecycleStatus = "scheduled" | "starting_soon" | "live" | "completed" | "cancelled" | "no_show";
+// `starting_soon` and `awaiting_outcome` are display-only: the backend derives
+// them from a stored `scheduled` (meetings/serializers.py _compute_display_status).
+// `awaiting_outcome` = the time has passed on a meeting with no link, so nothing
+// observed whether it happened; someone has to record the outcome.
+export type LifecycleStatus =
+  | "scheduled" | "starting_soon" | "live" | "awaiting_outcome"
+  | "completed" | "cancelled" | "no_show";
 export type ArtefactStatus = "none" | "processing" | "transcribed" | "notes_ready" | "failed";
 
 export function LifecycleBadge({ status }: { status: LifecycleStatus }) {
@@ -28,6 +34,9 @@ export function LifecycleBadge({ status }: { status: LifecycleStatus }) {
   }
   if (status === "no_show") {
     return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-2 py-0.5 rounded-full">No Show</Badge>;
+  }
+  if (status === "awaiting_outcome") {
+    return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-2 py-0.5 rounded-full">Awaiting outcome</Badge>;
   }
   return <Badge variant="outline" className="bg-primary/10 text-primary border-transparent text-xs px-2 py-0.5 rounded-full">Scheduled</Badge>;
 }

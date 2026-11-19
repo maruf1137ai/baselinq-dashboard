@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Calendar, FileText, Loader2, ExternalLink, X } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -21,10 +21,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-import { formatMeetingDateTime } from "@/lib/dateUtils";
 import { LifecycleBadge, ArtefactBadge } from "@/components/meetings/MeetingStatusBadges";
 import type { LifecycleStatus, ArtefactStatus } from "@/components/meetings/MeetingStatusBadges";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useQueryClient } from "@tanstack/react-query";
+import { MeetingSidePanel, type AttendeeResponse } from "@/components/meetings/MeetingSidePanel";
+import { ScheduleNewMeetingDialog } from "@/components/meetings/scheduleMeetingDialog";
+import { DeclineMeetingDialog } from "@/components/meetings/DeclineMeeting";
+import { apiErrorMessage } from "@/lib/apiErrorMessage";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
@@ -60,6 +64,7 @@ interface ActionItem {
 interface TranscriptSegment { id: number; speaker: string; time: string; text: string; }
 interface MeetingDetail {
   id: number;
+  project: number;
   title: string;
   status: LifecycleStatus;
   artefact_status: ArtefactStatus;
@@ -67,10 +72,17 @@ interface MeetingDetail {
   date: string;
   date_display: string;
   time: string;
+  timezone?: string;
   scheduled_utc?: string;
   location: string;
   meeting_link?: string;
+  priority?: string;
   my_rsvp: RsvpStatus | null;
+  /** True when the viewer created the meeting: only they edit its details. */
+  is_organiser?: boolean;
+  created_by_name?: string | null;
+  attendees: number[];
+  attendee_responses?: AttendeeResponse[];
   summary: { overview: string; sections: { title: string; body: string }[] };
   decisions: Decision[];
   action_items: ActionItem[];
@@ -151,6 +163,9 @@ export default function MeetingDetails() {
   const [pickedAssigneeId, setPickedAssigneeId] = useState<number | null>(null);
   const [aiNotesOpen, setAiNotesOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [outcomeDismissed, setOutcomeDismissed] = useState(
     () => localStorage.getItem(`no_show_confirmed_${id}`) === "1"
   );
@@ -301,6 +316,16 @@ export default function MeetingDetails() {
     toast.success("Action item declined.");
   };
 
+  // After an edit: this page, plus every page of the meetings list (its query
+  // key starts with the list URL — see meetingList.tsx), so a renamed or moved
+  // meeting is right when the user goes back.
+  const refreshMeeting = () => {
+    void refetch();
+    void queryClient.invalidateQueries({
+      predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("meetings/?project_id="),
+    });
+  };
+
   const handleStatusUpdate = async (newStatus: string) => {
     setStatusUpdating(true);
     try {
@@ -370,6 +395,9 @@ export default function MeetingDetails() {
   const isPast       = isCompleted || meeting.status === "no_show";
   const hasAiNotes   = meeting.artefact_status === "notes_ready";
   const isTerminal   = meeting.status === "completed" || meeting.status === "cancelled" || (meeting.status === "no_show" && outcomeDismissed);
+  // Cancelling and recording the outcome: the organiser always, others with
+  // meeting.update — the same rule the server applies to a status change.
+  const canRecordOutcome = !!meeting.is_organiser || canUpdateMeeting;
 
   return (
     <DashboardLayout>
@@ -397,9 +425,9 @@ export default function MeetingDetails() {
                   <Button
                     size="sm"
                     disabled={isRsvping}
-                    onClick={() => rsvpMutate("accepted", {
-                      onSuccess: () => { toast.success("Meeting accepted"); refetch(); },
-                      onError: () => toast.error("Failed to update RSVP"),
+                    onClick={() => rsvpMutate({ status: "accepted" }, {
+                      onSuccess: () => { toast.success("Meeting accepted"); refreshMeeting(); },
+                      onError: (err) => toast.error(apiErrorMessage(err, "Failed to update RSVP")),
                     })}
                     className="gap-1.5 bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
                   >
@@ -409,16 +437,13 @@ export default function MeetingDetails() {
                     variant="outline"
                     size="sm"
                     disabled={isRsvping}
-                    onClick={() => rsvpMutate("declined", {
-                      onSuccess: () => { toast.success("Meeting declined"); refetch(); },
-                      onError: () => toast.error("Failed to update RSVP"),
-                    })}
+                    onClick={() => setDeclineOpen(true)}
                     className="gap-1.5 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
                   >
                     <X className="h-4 w-4" /> Decline
                   </Button>
                 </div>
-              ) : canUpdateMeeting ? (
+              ) : canRecordOutcome ? (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -430,21 +455,9 @@ export default function MeetingDetails() {
               ) : null
             )}
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
-            </span>
-            {meeting.location && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" /> {meeting.location}
-              </span>
-            )}
-            {meeting.participants.length > 0 && (
-              <span className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" /> {meeting.participants.length} participants
-              </span>
-            )}
-            {meeting.meeting_link && !isTerminal && (
+          {/* Date, location and attendees live in the right-hand panel now. */}
+          {meeting.meeting_link && !isTerminal && (
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <button
                 onClick={handleJoinMeeting}
                 disabled={startingBot}
@@ -452,9 +465,14 @@ export default function MeetingDetails() {
               >
                 <ExternalLink className="h-4 w-4" /> Join Meeting
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* Two columns: notes and minutes on the left, the meeting's details
+            and its attendees on the right (same split as TaskDetails). */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
 
         {/* Linq AI Notes — primary flow when a meeting link was provided */}
         {isPast && (
@@ -826,8 +844,34 @@ export default function MeetingDetails() {
           </div>
         )}
 
+        {/* Pending outcome — awaiting_outcome: the time passed on a meeting with
+            no link, so nothing observed whether it happened. Each choice is
+            stored on the server (no_show is a real status), not in this browser. */}
+        {meeting.status === "awaiting_outcome" && canRecordOutcome && (
+          <div className="p-6 border border-amber-200 bg-amber-50 rounded-xl">
+            <p className="text-sm font-medium text-amber-800 mb-1">Awaiting outcome</p>
+            <p className="text-sm text-amber-700 mb-4">The scheduled time has passed. What happened with this meeting?</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => handleStatusUpdate("completed")} disabled={statusUpdating}>
+                Mark as Completed
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleStatusUpdate("cancelled")} disabled={statusUpdating}>
+                Mark as Cancelled
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleStatusUpdate("no_show")} disabled={statusUpdating}>
+                Mark as No Show
+              </Button>
+            </div>
+          </div>
+        )}
+        {meeting.status === "awaiting_outcome" && !canRecordOutcome && (
+          <div className="p-4 rounded-xl bg-muted/50 text-sm text-muted-foreground">
+            The scheduled time has passed. The organiser hasn't recorded what happened yet.
+          </div>
+        )}
+
         {/* Pending outcome — no_show */}
-        {meeting.status === "no_show" && !outcomeDismissed && canUpdateMeeting && (
+        {meeting.status === "no_show" && !outcomeDismissed && canRecordOutcome && (
           <div className="p-6 border border-amber-200 bg-amber-50 rounded-xl">
             <p className="text-sm font-medium text-amber-800 mb-1">Awaiting outcome</p>
             <p className="text-sm text-amber-700 mb-4">The scheduled time has passed. What happened with this meeting?</p>
@@ -867,14 +911,39 @@ export default function MeetingDetails() {
         )}
 
         {/* Upcoming meeting placeholder */}
-        {!isPast && meeting.status !== "no_show" && (
+        {!isPast && meeting.status !== "no_show" && meeting.status !== "awaiting_outcome" && (
           <EmptyState
             icon={FileText}
-            title="No meeting details yet"
-            description="Meeting details will appear here once the meeting is completed and AI notes are generated."
+            title="No notes yet"
+            description="Notes, decisions and action items appear here once the meeting has happened."
           />
         )}
+        </div>
+
+        <aside className="order-first lg:order-none lg:sticky lg:top-4">
+          <MeetingSidePanel
+            meeting={meeting}
+            onEdit={() => setEditOpen(true)}
+            onChanged={refreshMeeting}
+          />
+        </aside>
+        </div>
       </div>
+      <DeclineMeetingDialog
+        meetingId={meeting.id}
+        meetingTitle={meeting.title}
+        open={declineOpen}
+        onOpenChange={setDeclineOpen}
+        onDeclined={refreshMeeting}
+      />
+      {meeting.is_organiser && (
+        <ScheduleNewMeetingDialog
+          meeting={meeting}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={refreshMeeting}
+        />
+      )}
       {meeting && (
         <GenerateAiNotesDialog
           meetingId={meeting.id}

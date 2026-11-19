@@ -3,11 +3,16 @@ import { patchData } from "@/lib/Api";
 
 export type RsvpStatus = "invited" | "accepted" | "declined";
 
+/** A reply to a meeting invite. A decline must say why (the server refuses an empty reason). */
+export type RsvpReply =
+  | { status: "accepted" }
+  | { status: "declined"; reason: string };
+
 export function useMeetingRsvp(meetingId: number | string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (rsvpStatus: "accepted" | "declined") =>
-      patchData({ url: `meetings/${meetingId}/rsvp/`, data: { status: rsvpStatus } }),
+    mutationFn: (reply: RsvpReply) =>
+      patchData({ url: `meetings/${meetingId}/rsvp/`, data: reply }),
     onSuccess: () => {
       const projectId = localStorage.getItem("selectedProjectId");
       if (projectId) {

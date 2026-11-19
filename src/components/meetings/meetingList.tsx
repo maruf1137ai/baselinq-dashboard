@@ -17,6 +17,8 @@ import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
 import { useMeetingUnreadNotifications } from "@/hooks/useMeetingUnreadNotifications";
 import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
 import { toast } from "sonner";
+import { DeclineMeetingDialog } from "./DeclineMeeting";
+import { apiErrorMessage } from "@/lib/apiErrorMessage";
 
 interface Meeting {
   id: number;
@@ -35,11 +37,12 @@ interface Meeting {
   my_rsvp: RsvpStatus | null;
 }
 
-type FilterKey = "all" | "upcoming" | "completed" | "no_show" | "cancelled" | "declined";
+type FilterKey = "all" | "upcoming" | "awaiting_outcome" | "completed" | "no_show" | "cancelled" | "declined";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all",       label: "All" },
   { key: "upcoming",  label: "Upcoming" },
+  { key: "awaiting_outcome", label: "Past" },
   { key: "completed", label: "Completed" },
   { key: "no_show",   label: "No Show" },
   { key: "cancelled", label: "Cancelled" },
@@ -74,7 +77,11 @@ export default function MeetingsList() {
 
   const meetings: Meeting[] = data?.rows ?? [];
 
+  // Upcoming is decided by the server's status, never by our clock: a meeting
+  // whose time has passed comes back as `awaiting_outcome` (no link) or
+  // `no_show` (link, no bot), so it leaves this list on its own.
   const upcoming   = meetings.filter((m) => (m.status === "scheduled" || m.status === "starting_soon" || m.status === "live") && m.my_rsvp !== "declined");
+  const awaitingOutcome = meetings.filter((m) => m.status === "awaiting_outcome" && m.my_rsvp !== "declined");
   const declined   = meetings.filter((m) => m.my_rsvp === "declined");
   const completed  = meetings.filter((m) => m.status === "completed");
   const noShows    = meetings.filter((m) => m.status === "no_show");
@@ -89,6 +96,7 @@ export default function MeetingsList() {
   };
 
   const filteredUpcoming  = filterMeetings(upcoming);
+  const filteredAwaiting  = filterMeetings(awaitingOutcome);
   const filteredDeclined  = filterMeetings(declined);
   const filteredCompleted = filterMeetings(completed);
   const filteredNoShows   = filterMeetings(noShows);
@@ -97,6 +105,7 @@ export default function MeetingsList() {
   const counts: Record<FilterKey, number> = {
     all:       meetings.length,
     upcoming:  upcoming.length,
+    awaiting_outcome: awaitingOutcome.length,
     completed: completed.length,
     no_show:   noShows.length,
     cancelled: cancelled.length,
@@ -107,6 +116,7 @@ export default function MeetingsList() {
 
   const isEmpty =
     (!show("upcoming")  || filteredUpcoming.length === 0) &&
+    (!show("awaiting_outcome") || filteredAwaiting.length === 0) &&
     (!show("completed") || filteredCompleted.length === 0) &&
     (!show("no_show")   || filteredNoShows.length === 0) &&
     (!show("cancelled") || filteredCancelled.length === 0) &&
@@ -174,6 +184,14 @@ export default function MeetingsList() {
           {show("upcoming") && filteredUpcoming.length > 0 && (
             <Section title="Upcoming">
               {filteredUpcoming.map((item) => (
+                <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
+              ))}
+            </Section>
+          )}
+
+          {show("awaiting_outcome") && filteredAwaiting.length > 0 && (
+            <Section title="Past — awaiting outcome">
+              {filteredAwaiting.map((item) => (
                 <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
               ))}
             </Section>
@@ -262,16 +280,27 @@ function MeetingCard({ item, unreadNotifications }: { item: Meeting; unreadNotif
   const { mutate: rsvp, isPending: isRsvping } = useMeetingRsvp(item.id);
   const isUpcoming = item.status === "scheduled" || item.status === "starting_soon" || item.status === "live";
   const showRsvpButtons = isUpcoming && item.my_rsvp === "invited";
+  const [declineOpen, setDeclineOpen] = useState(false);
 
-  const handleRsvp = (e: React.MouseEvent, rsvpStatus: "accepted" | "declined") => {
+  const handleAccept = (e: React.MouseEvent) => {
     e.preventDefault();
-    rsvp(rsvpStatus, {
-      onSuccess: () => toast.success(rsvpStatus === "accepted" ? "Meeting accepted" : "Meeting declined"),
-      onError: () => toast.error("Failed to update RSVP"),
+    rsvp({ status: "accepted" }, {
+      onSuccess: () => toast.success("Meeting accepted"),
+      onError: (err) => toast.error(apiErrorMessage(err, "Failed to update RSVP")),
     });
   };
 
   return (
+    <>
+    {/* The decline dialog is a sibling of the Link, not inside it: React
+        events bubble through portals, so a click in the dialog would
+        otherwise also open the meeting. */}
+    <DeclineMeetingDialog
+      meetingId={item.id}
+      meetingTitle={item.title}
+      open={declineOpen}
+      onOpenChange={setDeclineOpen}
+    />
     <Link
       to={`/meetings/${item.id}`}
       className={`block rounded-xl border px-4 py-3 hover:bg-muted/50 transition-colors ${
@@ -331,14 +360,14 @@ function MeetingCard({ item, unreadNotifications }: { item: Meeting; unreadNotif
             <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
               <button
                 disabled={isRsvping}
-                onClick={(e) => handleRsvp(e, "accepted")}
+                onClick={handleAccept}
                 className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
               >
                 <Check className="h-3 w-3" /> Accept
               </button>
               <button
                 disabled={isRsvping}
-                onClick={(e) => handleRsvp(e, "declined")}
+                onClick={(e) => { e.preventDefault(); setDeclineOpen(true); }}
                 className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
               >
                 <X className="h-3 w-3" /> Decline
@@ -348,5 +377,6 @@ function MeetingCard({ item, unreadNotifications }: { item: Meeting; unreadNotif
         </div>
       </div>
     </Link>
+    </>
   );
 }

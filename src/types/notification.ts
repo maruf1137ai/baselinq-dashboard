@@ -15,6 +15,8 @@ export type NotificationType =
   | "meeting_invited"
   | "meeting_updated"
   | "meeting_transcript_ready"
+  // To the organiser when an attendee declines; the body is their reason.
+  | "meeting_declined"
   // Werner spec rev G — Tasks workflow events. Were missing here despite
   // being live in the backend (notification/models.py) and grouped under
   // notification/surfaces.py's "tasks" surface — the gap directly caused
