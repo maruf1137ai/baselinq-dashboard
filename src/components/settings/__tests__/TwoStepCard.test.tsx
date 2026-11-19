@@ -32,7 +32,7 @@ describe("TwoStepCard", () => {
 
   it("turns two-step sign-in on and shows the recovery codes once", async () => {
     api.getTwoStepStatus.mockResolvedValueOnce(OFF).mockResolvedValue(ON);
-    api.startTwoStepSetup.mockResolvedValue({ secret: "ABCDEFGH", otpauthUri: "otpauth://totp/x" });
+    api.startTwoStepSetup.mockResolvedValue({ secret: "ABCDEFGH", otpauthUri: "otpauth://totp/Baselinq%3Apa%40example.com?secret=ABCDEFGHIJKLMNOP&issuer=Baselinq&algorithm=SHA1&digits=6&period=30" });
     api.confirmTwoStepSetup.mockResolvedValue({ recoveryCodes: ["aaaaa-bbbbb"] });
     renderCard();
     fireEvent.click(await screen.findByRole("button", { name: "Turn on two-step sign-in" }));
